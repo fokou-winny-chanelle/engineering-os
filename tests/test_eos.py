@@ -26,6 +26,11 @@ _n = int(os.environ.get("GIT_CONFIG_COUNT", "0") or 0)
 for _i, (_k, _v) in enumerate((("gc.auto", "0"), ("maintenance.auto", "false")), start=_n):
     os.environ[f"GIT_CONFIG_KEY_{_i}"], os.environ[f"GIT_CONFIG_VALUE_{_i}"] = _k, _v
 os.environ["GIT_CONFIG_COUNT"] = str(_n + 2)
+# Tests only touch temp repos. When they run from a git hook (the pre-commit "eos unit tests" hook), git exports
+# GIT_INDEX_FILE / GIT_DIR etc. pointing at the repo being committed, and every git call in a temp repo would use
+# that index instead of its own. Drop them so the suite behaves the same inside and outside a hook.
+for _k in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_PREFIX", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY"):
+    os.environ.pop(_k, None)
 sys.path.insert(0, str(REPO / "bin"))
 sys.path.insert(0, str(REPO / "tests/fixtures"))
 import eos

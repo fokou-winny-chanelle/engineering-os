@@ -6,12 +6,26 @@ python3 tests/fixtures/make_fixtures.py workspace <dir>  4 sibling git repos (co
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-GIT_ID = ["-c", "user.name=t", "-c", "user.email=t@x", "-c", "core.autocrlf=false", "-c", "commit.gpgsign=false"]
+# core.excludesFile is pointed at the null device so the developer's global gitignore
+# (which eos bootstrap itself seeds with .env, for example) can't change what the fixtures track.
+GIT_ID = [
+    "-c",
+    "user.name=t",
+    "-c",
+    "user.email=t@x",
+    "-c",
+    "core.autocrlf=false",
+    "-c",
+    "commit.gpgsign=false",
+    "-c",
+    f"core.excludesFile={os.devnull}",
+]
 
 
 def git(d: Path, *args: str) -> None:
