@@ -27,7 +27,9 @@ for _i, (_k, _v) in enumerate((("gc.auto", "0"), ("maintenance.auto", "false")),
     os.environ[f"GIT_CONFIG_KEY_{_i}"], os.environ[f"GIT_CONFIG_VALUE_{_i}"] = _k, _v
 os.environ["GIT_CONFIG_COUNT"] = str(_n + 2)
 sys.path.insert(0, str(REPO / "bin"))
+sys.path.insert(0, str(REPO / "tests/fixtures"))
 import eos
+import make_fixtures  # fixture repos built in Python: no POSIX sh needed on Windows
 
 
 def sh(cmd: list[str], cwd: Path, stdin: str | None = None, env: dict | None = None) -> subprocess.CompletedProcess:
@@ -132,6 +134,7 @@ class PackTests(unittest.TestCase):
         spec["servers"]["context7"]["enabled"] = False
         self.assertEqual(eos.profile_servers(spec, "build", "cursor"), {"github": spec["servers"]["github"]})
 
+    @unittest.skipIf(sys.version_info < (3, 11), "eos models needs tomllib (Python 3.11+), as documented")
     def test_model_routing(self):
         cfg = eos.load_models_cfg(REPO)
         self.assertEqual(eos.models_errors(cfg), [])
@@ -145,6 +148,7 @@ class PackTests(unittest.TestCase):
         bad = {"tiers": {"a": {"models": []}}, "routing": {"x": "zzz"}}
         self.assertEqual(len(eos.models_errors(bad)), 2)
 
+    @unittest.skipIf(sys.version_info < (3, 11), "eos models needs tomllib (Python 3.11+), as documented")
     def test_models_user_override(self):
         with tempfile.TemporaryDirectory() as d:
             home = Path(d)
@@ -1308,7 +1312,7 @@ class AdoptTests(unittest.TestCase):
     def test_adopt_messy_repo_never_clobbers(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "messy"
-            self.assertEqual(sh(["sh", str(FIX / "make_messy.sh"), str(root)], Path(d)).returncode, 0)
+            make_fixtures.make_messy(root)
             before = {f: (root / f).read_bytes() for f in self.USER_FILES}
             agents_before = (root / "AGENTS.md").read_text(encoding="utf-8")
             claude_before = (root / "CLAUDE.md").read_text(encoding="utf-8")
@@ -1360,7 +1364,7 @@ class AdoptTests(unittest.TestCase):
     def test_scan_only_writes_nothing(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "messy"
-            sh(["sh", str(FIX / "make_messy.sh"), str(root)], Path(d))
+            make_fixtures.make_messy(root)
             before = sorted(p.relative_to(root).as_posix() for p in root.rglob("*") if ".git" not in p.parts)
             rc, out = run_eos("adopt", str(root), "--scan-only", "--yes")
             self.assertEqual(rc, 0)
@@ -1620,7 +1624,7 @@ class WorkspaceTests(unittest.TestCase):
     def test_four_repo_workspace(self):
         with tempfile.TemporaryDirectory() as d:
             ws = Path(d) / "ws"
-            self.assertEqual(sh(["sh", str(FIX / "make_workspace.sh"), str(ws)], Path(d)).returncode, 0)
+            make_fixtures.make_workspace(ws)
             self.assertTrue(eos.looks_like_workspace(ws))
             self.assertEqual(run_eos("init", str(ws), "--yes")[0], 2)  # refused: it's a workspace, not a project
             self.assertEqual(run_eos("init", str(ws / "api"), "--yes", "--tools", "cursor,cline,claude")[0], 0)
@@ -3480,6 +3484,9 @@ class StudioTests(unittest.TestCase):
         self.proj.mkdir()
         self.env = {k: os.environ.get(k) for k in ("EOS_STUDIO_CACHE", "EOS_STUDIO_SANDBOX")}
         os.environ["EOS_STUDIO_CACHE"] = str(self.root / "cache")
+        # hermetic: never probe a real Docker/Podman (Docker Desktop may be installed but stopped); tests that
+        # need a backend pass it explicitly
+        os.environ["EOS_STUDIO_SANDBOX"] = "none"
 
     def tearDown(self):
         for k, v in self.env.items():
@@ -5134,3 +5141,13 @@ class Portability(unittest.TestCase):
     def test_yaml_errors_are_value_errors(self):
         with self.assertRaises(ValueError):
             eos.load_yaml_or_json("schema: [unclosed\n", "c.yaml")
+
+    def test_windows_shell_steps_keep_quoted_paths(self):
+        line = r'"C:\Users\Jane Doe\py\python.exe" lint.py'
+        with mock.patch.object(eos, "IS_WINDOWS", True), mock.patch.dict(os.environ, {"COMSPEC": r"C:\W\cmd.exe"}):
+            self.assertEqual(eos.popen_args(["cmd", "/c", line]), r'"C:\W\cmd.exe" /d /s /c "' + line + '"')
+        self.assertEqual(eos.popen_args(["sh", "-c", line])[1:], ["-c", line])
+
+    def test_bwrap_mounts_are_posix(self):
+        b = eos.studio_sandbox_cmd("bwrap", "", [(Path("/p"), "/project", False)], {}, ["run"])
+        self.assertEqual(b[b.index("/project") - 2 : b.index("/project")], ["--ro-bind", "/p"])

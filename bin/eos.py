@@ -170,11 +170,22 @@ def split_cmd(cmd: str) -> list[str]:
     return [w[1:-1] if len(w) > 1 and w[0] == w[-1] and w[0] in "\"'" else w for w in shlex.split(cmd, posix=False)]
 
 
+def popen_args(argv: list[str]) -> list[str] | str:
+    """What to hand to subprocess. A Windows shell step ["cmd", "/c", <command line>] becomes one verbatim
+    command line: in a list, Python would escape the user's quotes as \\" (MSVC rules), which cmd.exe does not
+    understand, so `"C:\\Users\\Jane Doe\\python.exe" lint.py` broke. /s keeps everything between the outer quotes
+    as typed (what shell=True does); /d skips AutoRun macros. Everything else: resolve the program on PATH."""
+    if IS_WINDOWS and len(argv) == 3 and argv[0] == "cmd" and argv[1] == "/c":
+        return f'"{os.environ.get("COMSPEC") or "cmd.exe"}" /d /s /c "{argv[2]}"'
+    return resolve_argv(argv)
+
+
 def run(cmd: list[str], cwd: Path | None = None, timeout: int = 60, env: dict | None = None) -> tuple[int, str]:
-    cmd = resolve_argv(cmd)
+    args = popen_args(cmd)
+    cmd = args if isinstance(args, list) else cmd
     try:
         r = subprocess.run(
-            cmd,
+            args,
             cwd=cwd,
             capture_output=True,
             text=True,
@@ -184,7 +195,8 @@ def run(cmd: list[str], cwd: Path | None = None, timeout: int = 60, env: dict | 
             env=env,
             check=False,
         )
-        return r.returncode, (r.stdout or "") + (r.stderr or "")
+        rc = 127 if isinstance(args, str) and r.returncode == 9009 else r.returncode  # cmd.exe: not recognized
+        return rc, (r.stdout or "") + (r.stderr or "")
     except FileNotFoundError:
         return 127, f"not found: {cmd[0]}"
     except subprocess.TimeoutExpired:
@@ -11751,7 +11763,7 @@ def studio_sandbox_cmd(backend: str, image: str, mounts: list[tuple[Path, str, b
     for sysdir in ("/usr", "/lib", "/lib64", "/bin"):
         cmd += ["--ro-bind-try", sysdir, sysdir]
     for src, dst, rw in mounts:
-        cmd += ["--bind" if rw else "--ro-bind", str(src), dst]
+        cmd += ["--bind" if rw else "--ro-bind", Path(src).as_posix(), dst]  # bwrap is Linux-only: POSIX paths
     for k, v in env.items():
         cmd += ["--setenv", k, v]
     return [*cmd, "--chdir", "/out", *argv]

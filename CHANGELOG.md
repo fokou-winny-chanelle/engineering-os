@@ -21,6 +21,13 @@ All notable changes to engineering-os. Format: Keep a Changelog · Versioning: S
 - `scripts/db/alembic_squawk.py` scaffold resolves `ALEMBIC`/`SQUAWK` with `shutil.which` and keeps Windows paths;
   a missing command is a clear exit 2, not a traceback.
 - With PyYAML installed, malformed YAML contracts are reported like the built-in parser does (no traceback).
+- Windows shell steps (`ratchet` commands, `verify` full checks, the stop check) run as one verbatim
+  `cmd /d /s /c "..."` line: in a list, Python escaped quotes as `\"`, which cmd.exe does not understand, so a
+  quoted `"C:\Users\Jane Doe\...\python.exe" lint.py` failed. cmd.exe's "not recognized" (9009) counts as 127.
+- bubblewrap mount sources are POSIX paths.
+- Test fixture repos (`make_messy`, `make_workspace`) are built in Python (`tests/fixtures/make_fixtures.py`, same git
+  trees as the old shell scripts), so the suite no longer needs a POSIX `sh` on PATH on Windows. Studio tests never
+  probe a real Docker/Podman. `eos models` tests skip on Python 3.10 (it needs 3.11's tomllib, as documented).
 - Tests: no background git gc/maintenance in temp repos (flaky `Directory not empty: .git`); per-OS editor folders;
   quoted interpreter paths. New `Portability` tests: a static check that no I/O relies on the default encoding,
   key commands run under `PYTHONIOENCODING=cp1252` with `-X warn_default_encoding -W error::EncodingWarning`,

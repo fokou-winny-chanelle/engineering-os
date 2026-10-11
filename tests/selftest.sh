@@ -15,7 +15,7 @@ echo "== unit tests"
 if python3 -m unittest discover -s "$here/tests" >/dev/null 2>&1; then ok "unittest"; else python3 -m unittest discover -s "$here/tests"; exit 1; fi
 echo "== static checks"
 if has ruff; then ruff check "$here/bin/eos.py" -q && ok "ruff"; elif has uvx; then uvx -q ruff@0.16.10 check "$here/bin/eos.py" -q && ok "ruff"; fi
-if has shellcheck; then shellcheck "$here"/bootstrap.sh "$here"/tests/selftest.sh "$here"/tests/fixtures/*.sh "$here"/git-hooks/* && ok "shellcheck"; else echo "  skip shellcheck (not installed)"; fi
+if has shellcheck; then shellcheck "$here"/bootstrap.sh "$here"/tests/selftest.sh "$here"/git-hooks/* && ok "shellcheck"; else echo "  skip shellcheck (not installed)"; fi
 $eos budget >/dev/null && ok "pack budgets"
 $eos library lint >/dev/null && ok "library lint (deep refs: format, size, sources, dates, injection)"
 $eos vendor check >/dev/null && ok "vendor check (pinned, licensed, unchanged, reviewed)"
@@ -46,11 +46,11 @@ grep -q '"profile": "mobile"' "$tmp/expo/.eos/manifest.json" && grep -q '"react-
 [ -f "$tmp/flutter/.github/workflows/ci-flutter.yml" ] && ok "flutter stack + CI"
 
 echo "== v0.5: adopt, navigator, workspace"
-sh "$here/tests/fixtures/make_messy.sh" "$tmp/messy" >/dev/null
+python3 "$here/tests/fixtures/make_fixtures.py" messy "$tmp/messy" >/dev/null
 $eos adopt "$tmp/messy" --yes --tools all --no-baseline >/dev/null && (cd "$tmp/messy" && python3 .eos/bin/eos.py check >/dev/null) && ok "adopt messy repo + check"
 grep -q "Never touch app/billing/legacy.py" "$tmp/messy/AGENTS.md" && [ -f "$tmp/messy/.eos/suggested/.pre-commit-config.yaml" ] && ok "adopt kept the user's rules and configs"
 (cd "$tmp/messy" && python3 .eos/bin/eos.py next --brief | grep -q "^Next: ") && ok "eos next (project copy, no EOS_HOME needed)"
-sh "$here/tests/fixtures/make_workspace.sh" "$tmp/ws" >/dev/null
+python3 "$here/tests/fixtures/make_fixtures.py" workspace "$tmp/ws" >/dev/null
 $eos init "$tmp/ws/api" --yes --tools cursor,cline >/dev/null && $eos workspace init --dir "$tmp/ws" --name shop >/dev/null
 [ -f "$tmp/ws/shop.code-workspace" ] && grep -q "this repo = \`api\`" "$tmp/ws/api/AGENTS.md" && ok "workspace init (4 repos)"
 $eos workspace status --dir "$tmp/ws" | grep -q "infra" && ok "workspace status"
