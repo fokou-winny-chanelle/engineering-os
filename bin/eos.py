@@ -1096,6 +1096,7 @@ MODE_PLAIN = {
     "maintain": "a live product you keep running",
 }
 TOPOLOGY_PLAIN = {
+    "undecided": "chosen at the architecture step; `eos topology set <shape>` then",
     "single": "one app in one repo",
     "monorepo": "several apps in one repo",
     "modular-monolith": "one app split into modules",
@@ -1122,6 +1123,28 @@ PLAIN_TERMS = {  # for `eos next` / `eos status` with teaching on (first occurre
     "acceptance criteria": "how we know it's done",
     "PR": "a reviewed change request",
 }
+
+
+UNDECIDED = "undecided"  # greenfield without code: the repo shape is an architecture decision, not a detection
+
+
+def shape_label(topo: str | None) -> str:
+    """How a repo shape is shown to people: 'monorepo (several apps in one repo)', or 'not decided yet (...)'."""
+    if topo == UNDECIDED:
+        return f"not decided yet ({TOPOLOGY_PLAIN[UNDECIDED]})"
+    if not topo:
+        return "-"
+    return f"{topo} ({TOPOLOGY_PLAIN[topo]})" if topo in TOPOLOGY_PLAIN else topo
+
+
+def undecided_shape(root: Path, stacks: dict, topo: str | None, manifest: dict) -> str | None:
+    """An empty project's shape is undecided (also upgrades a 'single' that was only ever guessed for an empty
+    folder, i.e. never confirmed with `eos topology set` / `--topology`). Mechanics treat it as single."""
+    if manifest.get("topology_set") or stacks or topo not in (None, "single", UNDECIDED):
+        return topo
+    if repo_facts(root)["code_files"] == 0:
+        return UNDECIDED
+    return topo
 
 
 def gloss(text: str, seen: set[str]) -> str:
@@ -1180,7 +1203,7 @@ def describe_project(facts: dict, frameworks, topology: str | None = None) -> st
     if "Next.js" in front or "Nuxt" in front:  # Next.js is built on React, Nuxt on Vue: name the framework only
         front = [f for f in front if f not in ("React", "Vue")]
     if facts.get("code_files", 0) == 0:
-        return "A new project (no code yet)"
+        return "A new project (no code yet)."
     if mobile:
         what = f"A mobile app built with {mobile[0]}" + (f" and a {back[0]} backend" if back else "")
     elif front and back:
@@ -1226,7 +1249,13 @@ def project_frameworks(root: Path, base=()) -> set[str]:
 
 
 def plain_summary(
-    found: str, tools: list[str], hooks: bool, ci: bool, ratchet: bool, docs: list[tuple[str, str]]
+    found: str,
+    tools: list[str],
+    hooks: bool,
+    ci: bool,
+    ratchet: bool,
+    docs: list[tuple[str, str]],
+    shape_open: bool = False,
 ) -> str:
     """The 4-line, jargon-free ending of init/adopt/start, for someone who isn't an engineer."""
     names = [TOOL_NAMES.get(t, t) for t in tools]
@@ -1242,6 +1271,13 @@ def plain_summary(
         f"  Found : {found}",
         f"  Set up: {_join_words(setup)}.",
         "  Read  : " + "; ".join(f"{p} ({why})" for p, why in docs) + ".",
+    ]
+    if shape_open:
+        lines.append(
+            "  Shape : Structure (one repo or several, frontend/backend/admin) is decided at the architecture step;"
+            " nothing is locked now."
+        )
+    lines += [
         "  Next  : run `eos next` here. It names the one next step, says why, and gives the exact sentence to "
         "paste into " + ("Cline or Cursor" if "cline" in tools else "your AI chat") + ".",
     ]
@@ -1509,6 +1545,12 @@ def _names(items: list[str], n: int = 6) -> str:
 def topology_block(topo: str | None, det: dict | None) -> str:
     """Always-on, a few lines: the boundary rule agents most often break in each repo shape."""
     det = det or {}
+    if topo == UNDECIDED:
+        return (
+            "## Repo shape: not decided yet\n"
+            "- One repo or several, and where apps go (e.g. apps/web, apps/api), is decided at the architecture"
+            " step and approved by the human. Until then don't create apps/, services/ or new repos."
+        )
     if topo == "modular-monolith":
         mr = det.get("module_root") or "src/modules"
         mods = det.get("modules") or []
@@ -1668,7 +1710,7 @@ def cmd_topology(args: argparse.Namespace) -> int:
         if not m:
             eprint("not an eos project yet: `eos init --topology ...` or `eos adopt`")
             return 2
-        m["topology"], m["topology_details"] = args.value, det
+        m["topology"], m["topology_details"], m["topology_set"] = args.value, det, True
         save_manifest(root, m)
         print(f"topology set to {args.value}. Run `eos update` to add/remove the packs it needs.")
         _resync(root)
@@ -1884,10 +1926,17 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
     )
     answers_note = ""  # one plain line when a re-run silently keeps the earlier answers
     prev_phases = list(manifest.get("phases", []))
+    first_code = ""
     if update:
         cfg = {k: manifest[k] for k in CFG_KEYS if k in manifest}
+        if not cfg.get("stacks"):  # set up before there was code (greenfield): pick up the first apps
+            found = detect_stacks(root, stacks)[0]
+            if found:
+                cfg["stacks"] = found
+                first_code = f"  first code found: {', '.join(found)} (adding the checks for it)"
         if cfg.get("topology"):  # the confirmed shape stays; its details (new services, modules) refresh
             cfg["topology_details"] = detect_topology(root, cfg.get("stacks", {}))[2]
+            cfg["topology"] = undecided_shape(root, cfg.get("stacks", {}), cfg["topology"], manifest)
         prof = cfg.get("profile") or "full"  # projects from v0.3 and earlier had every pack
         if getattr(args, "teach", None):
             cfg["teaching"] = args.teach
@@ -1939,7 +1988,11 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
         cfg["profile"] = profile
         cfg["answers"] = complete_answers(answers)
         topo, tev, det = detect_topology(root, stack_dirs)
-        cfg["topology"] = getattr(args, "topology", None) or manifest.get("topology") or topo
+        cfg["topology"] = getattr(args, "topology", None) or undecided_shape(
+            root, stack_dirs, manifest.get("topology") or topo, manifest
+        )
+        if getattr(args, "topology", None):
+            manifest["topology_set"] = True
         cfg["topology_details"] = det
         mode, mev = detect_mode(root)
         cfg["mode"] = norm_mode(getattr(args, "mode", None)) or manifest.get("mode") or mode
@@ -2065,6 +2118,8 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
         f"eos {'update' if update else 'init'} -> {root}  (eos {manifest['eos_version']}{', DRY RUN' if args.dry_run else ''})"
     )
     print(f"  tools : {', '.join(cfg['tools'])}")
+    if first_code:
+        print(first_code)
     if cfg.get("profile"):
         a = cfg.get("answers", {})
         known = ", ".join(f"{k}={v}" for k, v in a.items() if v != "unknown") or "none (unknown = cautious defaults)"
@@ -2093,10 +2148,7 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
         )
     if cfg.get("mode") or cfg.get("topology"):
         mo, to, ga = cfg.get("mode") or "-", cfg.get("topology") or "-", cfg.get("gates") or "strict"
-        print(
-            f"  mode  : {mo}{' (' + MODE_PLAIN[mo] + ')' if mo in MODE_PLAIN else ''}   "
-            f"shape: {to}{' (' + TOPOLOGY_PLAIN[to] + ')' if to in TOPOLOGY_PLAIN else ''}"
-        )
+        print(f"  mode  : {mo}{' (' + MODE_PLAIN[mo] + ')' if mo in MODE_PLAIN else ''}   shape: {shape_label(to)}")
         print(
             f"          teaching: {cfg.get('teaching') or 'off'} (agents explain their choices)   "
             f"gates: {ga}{' (' + GATES_PLAIN[ga] + ')' if ga in GATES_PLAIN else ''}"
@@ -2200,6 +2252,7 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
                             "the rules your AI tools follow; add your project's details under 'Project specifics'",
                         )
                     ],
+                    shape_open=cfg.get("topology") == UNDECIDED,
                 )
             )
     return 1 if conflicts and args.strict else 0
@@ -4497,6 +4550,7 @@ def nav_facts(root: Path, m: dict) -> dict:
         "setup_only": setup_only,
         "facts": f,
         "bmad": (root / "_bmad").is_dir(),
+        "shape_decided": m.get("topology") != UNDECIDED or (root / WS_FILE).exists(),
     }
 
 
@@ -4545,6 +4599,8 @@ def eval_check(root: Path, c: dict, nf: dict) -> bool:
         return all(i["done"] for i in items if i["priority"] in ("P0", "P1"))
     if st == "plan_all_done":
         return all(i["done"] for i in nf["plan_items"])
+    if st == "shape_decided":  # `eos topology set <shape>`, or this folder became a workspace of repos
+        return nf.get("shape_decided", True)
     return False
 
 
@@ -4672,7 +4728,9 @@ def nav_status(root: Path, m: dict) -> dict:
                     "prompt": f"Implement {s['path']}: acceptance criteria as tests first, then code; full check before done.",
                 }
                 break
-        step = {k: c[k] for k in ("cmd", "prompt") if k in c} | ({"_explain": c["explain"]} if c.get("explain") else {})
+        step = {k: c[k] for k in ("cmd", "prompt", "options", "teach", "tip") if k in c} | (
+            {"_explain": c["explain"]} if c.get("explain") else {}
+        )
         step.update(say=c.get("do", c.get("label", "")), why=c.get("why") or cur.get("why", ""), _label=c.get("label"))
         if c.get("bmad") and nf["bmad"]:
             step["bmad"] = c["bmad"]
@@ -4722,6 +4780,8 @@ def nav_status(root: Path, m: dict) -> dict:
 
 
 def _action(n: dict) -> str:
+    if n.get("options"):
+        return "you choose: `eos next` lists the exact commands for each choice"
     if n.get("cmd"):
         return f"run `{n['cmd']}`"
     if n.get("prompt"):
@@ -4759,7 +4819,16 @@ def render_next(st: dict, brief: bool = False) -> str:
         lines.append(f"Why: {g(n['why'])}")
     tools = st.get("tools") or []
     chat = "Cline or Cursor" if "cline" in tools else "your AI chat (Cursor, Claude Code...)"
-    if teach and n.get("prompt"):
+    if n.get("options"):  # a decision: the human picks, each outcome gets its exact commands
+        lines.append("How: you decide (your agent can compare them for you), then run the lines for your choice:")
+        for i, o in enumerate(n["options"]):
+            lines.append(f"  {chr(65 + i)}) {o['label']}")
+            lines += [f"       {x}" for x in o.get("steps", [])]
+        if teach and n.get("teach"):
+            lines.append(f"In plain words: {n['teach']}")
+        if n.get("prompt"):
+            lines += [f"Not sure? Paste this into {chat}:", f'  "{n["prompt"]}"']
+    elif teach and n.get("prompt"):
         lines += [f"How: paste this sentence into {chat}:", f'  "{n["prompt"]}"']
     elif teach and n.get("cmd"):
         parts = [x.strip() for x in n["cmd"].split("&&")]
@@ -4772,6 +4841,8 @@ def render_next(st: dict, brief: bool = False) -> str:
         lines.append(f"  (or ask {chat} to run it for you)")
     elif act:
         lines.append(f"How: {act}")
+    if n.get("tip"):
+        lines.append(f"Tip: {n['tip']}")
     if n.get("bmad"):
         lines.append(f"  or with BMAD: run the `{n['bmad']}` skill (`bmad-help` shows BMAD's own next step)")
     if teach:
@@ -4791,11 +4862,12 @@ def render_status(st: dict) -> str:
     sym = {"done": "✓", "current": "▶", "todo": "·", "skipped": "–"}
     lines = [
         (
-            f"Mode: {st['mode']}   shape: {st['topology'] or '-'}   gates: {st['gates_mode']}   teaching: {st['teaching']}"
+            f"Mode: {st['mode']}   shape: "
+            f"{'not decided yet' if st['topology'] == UNDECIDED else st['topology'] or '-'}"
+            f"   gates: {st['gates_mode']}   teaching: {st['teaching']}"
             if st["teaching"] != "on"
-            else f"Mode: {st['mode']} ({MODE_PLAIN.get(st['mode'], '-')})   shape: {st['topology'] or '-'}"
-            f" ({TOPOLOGY_PLAIN.get(st['topology'] or '', 'how the code is laid out')})   gates: {st['gates_mode']}"
-            f" ({GATES_PLAIN.get(st['gates_mode'], '-')})   teaching: on"
+            else f"Mode: {st['mode']} ({MODE_PLAIN.get(st['mode'], '-')})   shape: {shape_label(st['topology'])}"
+            f"   gates: {st['gates_mode']} ({GATES_PLAIN.get(st['gates_mode'], '-')})   teaching: on"
         ),
         (
             f"Git: {st['git']['branch'] or '-'} ({st['git']['dirty']} uncommitted)   stories: {st['stories']['open']} open / "

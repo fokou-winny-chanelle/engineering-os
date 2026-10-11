@@ -2,6 +2,20 @@
 All notable changes to engineering-os. Format: Keep a Changelog · Versioning: SemVer.
 
 ## [Unreleased]
+### Changed: the repo shape of a new project is decided at the architecture step
+- A greenfield project without code records its shape as `undecided` and shows "not decided yet (chosen at the
+  architecture step)" in init/start output, `eos status` and AGENTS.md (a 2-line block telling agents not to create
+  apps/, services/ or repos yet). Mechanics (packs, CI, checks) treat it as single. The plain summary adds "Structure
+  ... is decided at the architecture step; nothing is locked now." `eos update` upgrades a `single` that was only
+  guessed for an empty folder (never confirmed with `eos topology set` / `--topology`, which now record `topology_set`).
+- Architecture phase: new exit criterion "the repo shape chosen" (`state: shape_decided`, met by `eos topology set` or
+  a workspace file). `eos next` lists the commands for each choice (monorepo, single app, separate repos in a
+  workspace), a "Not sure?" prompt for the agent, and with teaching on one plain sentence on the trade-off. Lifecycle
+  steps may carry `options`, `tip` and `teach`. The overview prompt asks for a "Repo shape" recommendation.
+- Ideation and discovery steps add a tip: use a strong model and attach inspiration images.
+- `eos update` picks up the first stacks of a project set up before it had code ("first code found").
+- New concept `eos explain repo-shape`.
+
 ### Changed: output a non-engineer can follow
 - Teaching mode is **on** by default for new `eos init` / `eos adopt` / `eos start` (`--teach off` or `eos teach off`
   opts out; existing projects keep their setting). With it on, `eos next` and `eos status` add a 3-6 word plain

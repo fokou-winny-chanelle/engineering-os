@@ -1674,6 +1674,80 @@ class NavigatorTests(unittest.TestCase):
             self.assertNotIn("eos explain", out)
             self.assertIn('How: ask your agent: "', out)  # terse form when teaching is off
 
+    def test_greenfield_shape_is_undecided_until_architecture(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            git_init(root)
+            rc, out = run_eos("start", d, "--yes", "--tools", "cursor,cline")
+            self.assertEqual(rc, 0, out)
+            self.assertIn("shape: not decided yet (chosen at the architecture step", out)
+            self.assertNotIn("single (one app in one repo)", out)
+            self.assertIn("decided at the architecture step; nothing is locked now", out)
+            m = eos.load_manifest(root)
+            self.assertEqual(m["topology"], eos.UNDECIDED)
+            # mechanics treat it as single: same packs
+            spec, (phases, _) = eos.load_profiles(REPO), eos.load_home_packs(REPO)
+            self.assertEqual(
+                eos.select_phases(spec, "full", {}, phases, "greenfield", eos.UNDECIDED),
+                eos.select_phases(spec, "full", {}, phases, "greenfield", "single"),
+            )
+            self.assertIn("## Repo shape: not decided yet", (root / "AGENTS.md").read_text(encoding="utf-8"))
+            self.assertIn("not decided yet", run_eos("status", d)[1])
+            self.assertEqual(run_eos("check", d)[0], 0)
+            sh(["git", "add", "-A"], root)
+            sh(["git", "commit", "-qm", "init", "--no-verify"], root)
+            out = run_eos("next", d)[1]  # ideation: strong model + inspiration images
+            self.assertIn("strong model", out)
+            self.assertIn("inspiration", out)
+            sh(["git", "switch", "-qc", "feat/plan"], root)
+            for _ in range(12):
+                if eos.nav_status(root, eos.load_manifest(root))["phase"] == "architect":
+                    break
+                run_eos("next", d, "--skip")
+            (root / "docs/architecture").mkdir(parents=True)
+            (root / "docs/architecture/overview.md").write_text(
+                "# O\n\n## Quality attributes\n|a|b|\n|-|-|\n|x|y|\n\n## Failure modes\n|a|b|\n|-|-|\n|x|y|\n",
+                encoding="utf-8",
+                newline="\n",
+            )
+            run_eos("new", "adr", "Use PostgreSQL", "--dir", d)
+            out = run_eos("next", d)[1]
+            self.assertIn("Choose the repo shape", out)
+            for needle in ("eos topology set monorepo", "apps/web", "eos workspace init", "git init", "eos update"):
+                self.assertIn(needle, out)
+            self.assertIn("one repo with several apps is usually simplest", out)  # teaching on: one plain sentence
+            run_eos("topology", "set", "monorepo", "--dir", d)
+            self.assertNotEqual(eos.nav_status(root, eos.load_manifest(root))["phase"], "architect")
+            # a workspace of separate repos also counts as decided
+            m = eos.load_manifest(root)
+            m["topology"] = eos.UNDECIDED
+            eos.save_manifest(root, m)
+            self.assertEqual(eos.nav_status(root, m)["phase"], "architect")
+            (root / eos.WS_FILE).write_text('{"name": "x", "repos": []}\n', encoding="utf-8", newline="\n")
+            self.assertNotEqual(eos.nav_status(root, m)["phase"], "architect")
+
+    def test_guessed_single_on_empty_project_becomes_undecided_and_first_code_is_picked_up(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            git_init(root)
+            run_eos("init", d, "--yes", "--tools", "cursor")
+            m = eos.load_manifest(root)
+            m["topology"] = "single"  # what earlier versions recorded for an empty folder
+            eos.save_manifest(root, m)
+            run_eos("update", d)
+            self.assertEqual(eos.load_manifest(root)["topology"], eos.UNDECIDED)
+            run_eos("topology", "set", "single", "--dir", d)  # a confirmed choice is never undone
+            run_eos("update", d)
+            self.assertEqual(eos.load_manifest(root)["topology"], "single")
+            (root / "src").mkdir()
+            (root / "pyproject.toml").write_text(
+                '[project]\nname = "x"\nversion = "0.1.0"\n', encoding="utf-8", newline="\n"
+            )
+            (root / "src/app.py").write_text("x = 1\n", encoding="utf-8", newline="\n")
+            _, out = run_eos("update", d)
+            self.assertIn("first code found", out)
+            self.assertIn("python", eos.load_manifest(root)["stacks"])
+
     def test_blockers_come_first(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)

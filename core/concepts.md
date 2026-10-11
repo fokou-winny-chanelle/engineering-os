@@ -40,6 +40,9 @@ Sources: https://www.thoughtworks.com/radar/techniques/architectural-fitness-fun
 Independently deployable **services**, each owning its data. They talk through **contracts** (OpenAPI, AsyncAPI, protobuf) that are versioned and checked for breaking changes in CI. A **service catalog** (`docs/architecture/services.md`, Backstage `catalog-info.yaml`) says who owns what. Worth it when teams or scaling needs really differ; otherwise a modular monolith is cheaper. `eos new service <name>` scaffolds one.
 Sources: https://microservices.io/patterns/data/database-per-service.html · https://github.com/oasdiff/oasdiff · https://backstage.io/docs/features/software-catalog/descriptor-format
 
+## repo-shape | topology | shape
+How the code is laid out: one app in one repo (`single`), one repo with several apps such as apps/web, apps/admin, apps/api (`monorepo`), one app split into modules (`modular-monolith`), many small services (`microservices`), or separate repos in one parent folder (a workspace). For a new project it stays "not decided yet" until the architecture step, because it's hard to change later; `eos next` then lists the commands for each choice. For one person, one repo with several apps is usually simplest (one clone, one set of checks, one commit for a change that spans frontend and backend). Separate repos pay off when different people or teams own and release the parts on their own. Set it with `eos topology set <shape>`, then `eos update`.
+
 ## monorepo
 Several apps or packages in one repository with shared tooling (pnpm/uv workspaces, Turborepo, Nx). Changes across apps land in one PR. eos wires checks and CI per app dir, each with its own path filter, so a change to one app doesn't run every pipeline.
 Sources: https://pnpm.io/workspaces · https://docs.astral.sh/uv/concepts/projects/workspaces/ · https://turborepo.com/docs

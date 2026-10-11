@@ -1,6 +1,6 @@
 {
  "version": 1,
- "about": "Phase state machine read by `eos status` / `eos next`. Per mode: ordered phases, each with exit criteria. The current phase is the first one whose exit criteria are not all met. Checks are declarative (no code): exists, glob_min, checked, tables, table_status, state, any. Edit .eos/lifecycle.json in a project to adapt it; `eos update` keeps your copy if you changed it.",
+ "about": "Phase state machine read by `eos status` / `eos next`. Per mode: ordered phases, each with exit criteria. The current phase is the first one whose exit criteria are not all met. Checks are declarative (no code): exists, glob_min, checked, tables, table_status, state, any. A step may carry `options` (a decision: the human picks, each choice lists its exact steps), `tip` and `teach` (one plain sentence shown with teaching mode on). Edit .eos/lifecycle.json in a project to adapt it; `eos update` keeps your copy if you changed it.",
  "modes": {
   "greenfield": [
    "ideate",
@@ -57,8 +57,9 @@
      ],
      "label": "an idea note",
      "do": "Write a one-page idea note (problem, who has it, why now)",
-     "prompt": "Help me shape my idea into docs/ideas/<slug>.md using the ideation pack. Ask me questions one at a time.",
-     "bmad": "bmad-brainstorming"
+     "prompt": "Help me shape my idea into docs/ideas/<slug>.md using the ideation pack. Ask me questions one at a time. If I attach images, describe what you take from each one and note it in the idea.",
+     "bmad": "bmad-brainstorming",
+     "tip": "Do this in a chat with a strong model (Cursor's best model, or Cline in Plan mode) and attach any inspiration you have: screenshots of apps you like, sketches, photos of a paper drawing."
     }
    ]
   },
@@ -85,7 +86,8 @@
      "label": "a product brief",
      "do": "Write the product brief",
      "prompt": "Draft docs/discovery/brief.md with the discovery pack: users, problem, alternatives, success metric, riskiest assumptions.",
-     "bmad": "bmad-product-brief"
+     "bmad": "bmad-product-brief",
+     "tip": "Do this in a chat with a strong model (Cursor's best model, or Cline in Plan mode) and attach any inspiration you have: screenshots of apps you like, sketches, photos of a paper drawing."
     }
    ]
   },
@@ -167,7 +169,7 @@
      ],
      "label": "an architecture overview",
      "do": "Write the architecture overview",
-     "prompt": "Propose the simplest architecture for docs/prd.md in docs/architecture/overview.md (architecture pack). Start as a modular monolith unless there is a reason not to.",
+     "prompt": "Propose the simplest architecture for docs/prd.md in docs/architecture/overview.md (architecture pack). Start as a modular monolith unless there is a reason not to. Include a '## Repo shape' section: one app, one repo with several apps (e.g. apps/web, apps/admin, apps/api), or separate repos, with the trade-offs and your recommendation; I decide.",
      "bmad": "bmad-architecture"
     },
     {
@@ -196,6 +198,41 @@
      "do": "Record the first key decision as an ADR",
      "cmd": "eos new adr \"<decision>\"",
      "why": "A decision written down can be revisited on purpose instead of re-argued by every session."
+    },
+    {
+     "state": "shape_decided",
+     "label": "the repo shape chosen",
+     "do": "Choose the repo shape: one repo or several, and where each app goes",
+     "why": "Where the frontend, admin and backend live is hard to change later, so you decide it once, on purpose, now that the architecture is written.",
+     "teach": "For one person, one repo with several apps is usually simplest: one place to clone, one set of checks, and a change that touches frontend and backend is one commit. Separate repos pay off when different people or teams own and release the parts on their own. Your call; nothing forces either.",
+     "prompt": "Read docs/architecture/overview.md and the ADRs. Recommend a repo shape for this project (one app, one repo with several apps such as apps/web, apps/admin, apps/api, or separate repos) with the trade-offs for a team of my size. Don't create folders or repos; I decide.",
+     "options": [
+      {
+       "label": "One repo, several apps (monorepo) in this folder",
+       "steps": [
+        "eos topology set monorepo",
+        "put each app in its own folder: apps/web, apps/admin, apps/api (shared code in packages/)",
+        "eos update   (again once the apps have code: it adds the checks for their languages)"
+       ]
+      },
+      {
+       "label": "One app in this repo",
+       "steps": [
+        "eos topology set single",
+        "eos update   (again once there is code)"
+       ]
+      },
+      {
+       "label": "Separate repos (one per app); this folder keeps the plans and becomes the workspace",
+       "steps": [
+        "for each app, e.g. web, then api:  mkdir web  /  cd web  /  git init  /  eos init  /  cd ..",
+        "add each app folder (web/, api/) to this folder's .gitignore (each one is its own repo)",
+        "eos workspace init --force",
+        "eos update"
+       ]
+      }
+     ],
+     "explain": "repo-shape"
     }
    ]
   },

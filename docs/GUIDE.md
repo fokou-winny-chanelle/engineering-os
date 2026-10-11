@@ -74,6 +74,8 @@ eos also detects the **shape** of your repository and adapts the checks:
 
 Correct a wrong guess with `eos topology set <shape>`.
 
+**A new project starts with the shape "not decided yet".** Whether the website, admin and API live in one repo (`apps/web`, `apps/admin`, `apps/api`) or in separate repos is an architecture decision, and it's hard to change later. So nothing is locked when you run `eos start`. When the architecture overview and the first decision record are written, `eos next` asks you to choose and lists the exact commands for each choice: `eos topology set monorepo` (one repo, several apps), `eos topology set single` (one app), or separate repos in a workspace (`eos workspace init`). For one person, one repo with several apps is usually simplest, but it's your call. `eos explain repo-shape`
+
 ## 6. What a normal session looks like
 1. Open the project in your editor. Ask your agent for the task, or run `eos next` if you don't know what the task should be.
 2. The agent works. Small changes it just makes. For risky ones it shows a short plan first, and waits for you when money, logins or security are involved.
