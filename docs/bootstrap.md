@@ -1,5 +1,7 @@
 # Bootstrap notes per OS
 
+New PC, step by step in plain words: [NEW-MACHINE.md](NEW-MACHINE.md).
+
 `bootstrap.sh` / `bootstrap.ps1` only need **git** and **Python ≥ 3.10**. They install **uv** (official installer) and **pre-commit** (via `uv tool`) if those are missing, then run `eos bootstrap`. Everything else is reported by `eos doctor`; it is never force-installed. eos never runs `sudo`.
 
 | Tool | macOS (Homebrew) | Debian/Ubuntu | Windows (winget) |
@@ -21,7 +23,8 @@ git clone https://github.com/<you>/engineering-os "$HOME\engineering-os"
 powershell -ExecutionPolicy Bypass -File "$HOME\engineering-os\bootstrap.ps1" --tools "cursor,cline"
 ```
 
-- **What it does:** finds a real Python 3.10+ (`python` or `py -3`; the Microsoft Store alias stub doesn't count). Installs `uv` with the official installer, or with winget if you pass `-UseWinget`. Installs `pre-commit` at the pinned version with `uv tool install`. Runs `eos bootstrap`. Adds `%USERPROFILE%\.local\bin` to your **user** PATH (no admin rights; pass `-NoPath` to skip). Open a new terminal afterwards.
+- **What it does:** finds a real Python 3.10+ (`python` or `py -3`; the Microsoft Store alias stub doesn't count). Installs `uv` with the official installer, or with winget if you pass `-UseWinget`. Installs `pre-commit` at the pinned version with `uv tool install`. Runs `eos bootstrap`. Adds `%USERPROFILE%\.local\bin` to your **user** PATH (no admin rights; pass `-NoPath` to skip). Copies the keys that `~\.cursor\mcp.json` references as `${env:NAME}` from `secrets.env` into your **user** environment variables, because Cursor started from the Start menu reads only those (values are never printed; `-NoEnv` skips it; restart Cursor afterwards). Open a new terminal afterwards.
+- **Cline extension:** with Cline among the tools (the default), `eos bootstrap` installs `saoudrizwan.claude-dev` into Cursor through Cursor's CLI (`cursor` on PATH, else `%LOCALAPPDATA%\Programs\cursor\resources\app\bin\cursor.cmd`; macOS `/Applications/Cursor.app/...`; Linux `/usr/share/cursor/bin/cursor`). It skips the install if `--list-extensions` already lists it, and never fails the bootstrap: without the CLI it prints the manual step. `--no-cline-install` skips it. Bootstrap ends with a checklist of what only you can do (empty key names, Cline provider and models, first project).
 - **`eos` on Windows** is `%USERPROFILE%\.local\bin\eos.cmd`. It calls the absolute path of the Python that ran bootstrap, quoted, so profile paths with spaces (`C:\Users\Jane Doe`) work. It runs from cmd and PowerShell alike.
 - **Comma lists:** quote them (`--tools "cursor,cline"`). The script also re-joins unquoted lists that PowerShell turned into arrays.
 - **Output encoding:** eos switches its own stdin/stdout to UTF-8 on Windows, so piped output and hook JSON with non-ASCII paths work in Windows PowerShell 5.1 too.

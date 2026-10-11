@@ -6,6 +6,9 @@
 #   ./bootstrap.sh --tools all --global-hooks
 #   ./bootstrap.sh --dry-run               # show what would change
 # It is idempotent: re-run it after editing personal/PROFILE.user.md (your git-ignored profile), mcp/servers.json or secrets.env.
+# With Cline among the tools (the default) it also installs the Cline extension into Cursor via Cursor's CLI
+# (`cursor` on PATH or the default install folder; skipped with a manual hint if absent; --no-cline-install skips it).
+# New machine from scratch: docs/NEW-MACHINE.md
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 

@@ -10,10 +10,15 @@
 # Notes:
 #   - Cline hooks are macOS/Linux only today; on Windows the guard runs for Cursor and Claude Code.
 #   - What it installs, only if missing and only for your user (no admin): uv (official installer, or winget if
-#     you pass -UseWinget), then pre-commit at the version pinned in versions.toml (via uv).
+#     you pass -UseWinget), then pre-commit at the version pinned in versions.toml (via uv). With Cline among the
+#     tools (the default), `eos bootstrap` also installs the Cline extension into Cursor through Cursor's CLI.
+#   - Cursor reads MCP keys from Windows user environment variables (${env:NAME} in ~\.cursor\mcp.json). This
+#     script copies those keys from secrets.env into your user environment (values never printed). -NoEnv skips it.
+#   - New PC from scratch: docs/NEW-MACHINE.md.
 param(
   [switch]$UseWinget,
   [switch]$NoPath,
+  [switch]$NoEnv,
   [Parameter(ValueFromRemainingArguments = $true)] $Rest
 )
 $ErrorActionPreference = "Stop"
@@ -79,6 +84,27 @@ foreach ($a in @($Rest)) {
 }
 
 Invoke-Native $py (@((Join-Path $here "bin\eos.py"), "bootstrap") + $fwd) "eos bootstrap"
+
+# --- user env vars for Cursor: the keys ~\.cursor\mcp.json references as ${env:NAME}, copied from secrets.env ---
+$secretsFile = Join-Path $HOME ".config\engineering-os\secrets.env"
+$mcpJson = Join-Path $HOME ".cursor\mcp.json"
+$testRun = ($fwd -contains "--dry-run") -or (@($fwd | Where-Object { $_ -like "--home*" }).Count -gt 0)
+if (-not $NoEnv -and -not $testRun -and (Test-Path $secretsFile) -and (Test-Path $mcpJson)) {
+  $wanted = @([regex]::Matches((Get-Content -Raw $mcpJson), '\$\{env:([A-Za-z0-9_]+)\}') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+  $setAny = $false
+  foreach ($line in (Get-Content $secretsFile)) {
+    if ($line -notmatch '^\s*(export\s+)?([A-Za-z0-9_]+)\s*=(.*)$') { continue }
+    $name = $Matches[2]
+    $val = $Matches[3].Trim().Trim('"').Trim("'")
+    if (-not $val -or ($wanted -notcontains $name)) { continue }
+    if ([Environment]::GetEnvironmentVariable($name, "User") -ne $val) {
+      [Environment]::SetEnvironmentVariable($name, $val, "User")
+      Write-Host "Set user environment variable $name for Cursor (value not shown)."
+      $setAny = $true
+    }
+  }
+  if ($setAny) { Write-Host "Restart Cursor (close every window) so it sees the new environment variables." }
+}
 
 # --- user PATH (no admin): add ~\.local\bin so 'eos', 'uv' and 'pre-commit' work in new terminals ---
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")

@@ -980,6 +980,81 @@ class BootstrapTests(unittest.TestCase):
             r = sh([sys.executable, str(REPO / "bin/eos.py"), "mcp", "status", "--home", h], REPO, env=env)
             self.assertIn("cline   design", r.stdout)
 
+    def test_cline_install_is_idempotent_and_never_fatal(self):
+        calls: list[list[str]] = []
+
+        def fake_run(listed: str, install_rc: int = 0):
+            def run(cmd, **_kw):
+                calls.append(cmd)
+                if "--list-extensions" in cmd:
+                    return 0, listed
+                return install_rc, "boom" if install_rc else "installed"
+
+            return run
+
+        home = Path(tempfile.gettempdir())
+        with mock.patch.object(eos, "cursor_cli", lambda *_a: "/fake/cursor"):
+            with mock.patch.object(eos, "run", fake_run("ms-python.python\nSaoudRizwan.claude-dev@4.1.23\n")):
+                ok, line = eos.install_cline(home, True, False)
+            self.assertTrue(ok, line)
+            self.assertIn("already installed", line)
+            self.assertFalse(any("--install-extension" in c for c in calls))  # skipped: already there
+            with mock.patch.object(eos, "run", fake_run("ms-python.python\n")):
+                ok, line = eos.install_cline(home, True, True)  # dry run: says so, installs nothing
+            self.assertFalse(ok)
+            self.assertIn("would install", line)
+            self.assertFalse(any("--install-extension" in c for c in calls))
+            with mock.patch.object(eos, "run", fake_run("")):
+                ok, _ = eos.install_cline(home, True, False)
+            self.assertTrue(ok)
+            self.assertEqual(calls[-1], ["/fake/cursor", "--install-extension", eos.CLINE_EXT])
+            with mock.patch.object(eos, "run", fake_run("", install_rc=1)):
+                ok, line = eos.install_cline(home, True, False)
+            self.assertFalse(ok)
+            self.assertIn("by hand", line)
+        with mock.patch.object(eos, "cursor_cli", lambda *_a: None):
+            ok, line = eos.install_cline(home, True, False)
+        self.assertFalse(ok)
+        self.assertIn("search 'Cline'", line)
+
+    def test_cursor_cli_with_test_home_never_uses_path(self):
+        with tempfile.TemporaryDirectory() as h:
+            home = Path(h)
+            with mock.patch.object(eos.shutil, "which", lambda _n: "/usr/bin/cursor"):
+                self.assertEqual(eos.cursor_cli(home, True), "/usr/bin/cursor")
+                with mock.patch.object(eos.platform, "system", lambda: "Linux"):
+                    self.assertIsNone(eos.cursor_cli(home, False))
+                with mock.patch.object(eos.platform, "system", lambda: "Windows"):
+                    self.assertIsNone(eos.cursor_cli(home, False))
+                    cmd = home / "AppData/Local/Programs/cursor/resources/app/bin/cursor.cmd"
+                    cmd.parent.mkdir(parents=True)
+                    cmd.write_text("@echo off\r\n", encoding="utf-8")
+                    self.assertEqual(eos.cursor_cli(home, False), str(cmd))
+
+    def test_bootstrap_prints_human_checklist_without_values(self):
+        with tempfile.TemporaryDirectory() as h:
+            home = Path(h)
+            sfile = home / ".config/engineering-os/secrets.env"
+            sfile.parent.mkdir(parents=True)
+            sfile.write_text("CONTEXT7_API_KEY=ctx7-SECRETVALUE\nGITHUB_MCP_PAT=\n", encoding="utf-8", newline="\n")
+            env_keys = ("CONTEXT7_API_KEY", "GITHUB_MCP_PAT", "POSTMAN_API_KEY", "POSTGRES_MCP_URL")
+            with mock.patch.dict(os.environ, {k: "" for k in env_keys}):
+                rc, out = quiet(eos.main, ["bootstrap", "--home", h, "--tools", "cursor,cline", "--no-mcp"])
+            self.assertEqual(rc, 0)
+            self.assertNotIn("SECRETVALUE", out)
+            todo = out.split("What only you can do now", 1)[1]
+            self.assertIn("GITHUB_MCP_PAT", todo)  # empty: named
+            self.assertNotIn("CONTEXT7_API_KEY", todo)  # filled: not nagged
+            for needle in ("Cline: Focus on View", "Bring my own API key", "OpenRouter", "eos adopt", "eos start"):
+                self.assertIn(needle, todo)
+            for _mode, model, effort, _price in eos.CLINE_MODELS:
+                self.assertIn(f"{model}", todo)
+                self.assertIn(f"reasoning {effort}", todo)
+            self.assertIn("cline: Cursor's command-line tool not found", out)  # --home: real Cursor untouched
+            rc, out = quiet(eos.main, ["bootstrap", "--home", h, "--tools", "cursor", "--no-mcp"])
+            self.assertNotIn("Bring my own API key", out)  # no Cline chosen: no Cline steps
+            self.assertNotIn("cline:", out)
+
 
 class ProfileTests(unittest.TestCase):
     def setUp(self):

@@ -2,6 +2,8 @@
 
 This guide is for you if you build software with AI tools but don't know (or don't want to memorise) the engineering principles behind the steps. You don't need to read anything else to start. Each section ends with the command that does the work.
 
+Not set up yet, or on a new computer? Start with [NEW-MACHINE.md](NEW-MACHINE.md) (install, keys, Cline, first check), then come back here.
+
 ## 1. What eos does, in one minute
 AI coding agents are fast but forgetful. They don't know your project's rules, they repeat mistakes, and they say "done" before anything is checked. eos gives every agent you use (Cursor, Cline, Claude Code, Codex) the same short rules, loads detailed guidance only when it's needed, checks the work automatically, and tells **you** what to do next.
 

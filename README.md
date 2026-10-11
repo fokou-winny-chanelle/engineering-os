@@ -25,6 +25,8 @@ engineering-os answers each with a mechanism, not a longer prompt:
 
 ## Quick start (about 2 minutes)
 
+**Setting up a new PC from scratch, or not used to terminals?** Follow [docs/NEW-MACHINE.md](docs/NEW-MACHINE.md): one page, numbered steps from a blank machine to Cursor + Cline + eos working.
+
 You need Git and Python 3.10+. `uv` and `pre-commit` are installed by the bootstrap script if missing.
 
 **Windows** (PowerShell 5.1 or 7; paths with spaces are fine):

@@ -12600,6 +12600,112 @@ def render_mcp(
     return sorted(spec), notes
 
 
+CLINE_EXT = "saoudrizwan.claude-dev"  # Cline's id on the VS Code Marketplace and Open VSX
+# Shown after bootstrap. OpenRouter prices checked on https://openrouter.ai/api/v1/models (Oct 2026).
+CLINE_MODELS = (
+    ("Act", "anthropic/claude-haiku-5.5", "None", "$0.10 in / $0.50 out"),
+    ("Plan", "anthropic/claude-sonnet-5.5", "Low", "$2 in / $10 out"),
+)
+
+
+def cursor_cli(home: Path, real_home: bool) -> str | None:
+    """Cursor's command-line launcher (used only to install Cline): `cursor` on PATH, then the default install
+    folders. With `--home <dir>` (tests) only that folder is searched, never PATH or system folders."""
+    if real_home:
+        found = shutil.which("cursor")
+        if found:
+            return found
+    sysname = platform.system()
+    cands: list[Path] = []
+    if sysname == "Windows":
+        local = os.environ.get("LOCALAPPDATA") if real_home else None
+        cands.append(
+            (Path(local) if local else home / "AppData" / "Local") / "Programs/cursor/resources/app/bin/cursor.cmd"
+        )
+        if real_home:
+            cands.append(
+                Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "cursor/resources/app/bin/cursor.cmd"
+            )
+    elif sysname == "Darwin":
+        cands.append(home / "Applications/Cursor.app/Contents/Resources/app/bin/cursor")
+        if real_home:
+            cands.append(Path("/Applications/Cursor.app/Contents/Resources/app/bin/cursor"))
+    elif real_home:
+        cands += [Path("/usr/share/cursor/bin/cursor"), Path("/opt/Cursor/resources/app/bin/cursor")]
+    return next((str(c) for c in cands if c.is_file()), None)
+
+
+def install_cline(home: Path, real_home: bool, dry: bool) -> tuple[bool, str]:
+    """Install the Cline extension into Cursor through Cursor's CLI. Idempotent, never fatal:
+    (installed or already there, log line). Without the CLI the log line is the manual step."""
+    manual = "install it by hand: Cursor > Extensions (Ctrl+Shift+X) > search 'Cline' > Install"
+    cli = cursor_cli(home, real_home)
+    if not cli:
+        return False, f"cline: Cursor's command-line tool not found (is Cursor installed?); {manual}"
+    code, out = run([cli, "--list-extensions"], timeout=120)
+    if code != 0:
+        return False, f"cline: `cursor --list-extensions` failed (exit {code}); {manual}"
+    if CLINE_EXT in [ln.strip().lower().split("@")[0] for ln in out.splitlines()]:
+        return True, f"cline: extension {CLINE_EXT} already installed in Cursor"
+    if dry:
+        return False, f"cline: would install {CLINE_EXT} into Cursor ({cli})"
+    code, out = run([cli, "--install-extension", CLINE_EXT], timeout=600)
+    if code != 0:
+        tail = out.strip().splitlines()[-1][:120] if out.strip() else ""
+        return False, f"cline: install failed (exit {code}{': ' + tail if tail else ''}); {manual}"
+    return True, f"cline: installed {CLINE_EXT} into Cursor (restart Cursor to see it)"
+
+
+def human_checklist(
+    home: Path, eos_home: Path, tools: list[str], profiles: dict[str, str], cline_ok: bool | None
+) -> list[str]:
+    """What only the person at the keyboard can do after bootstrap. Key names only, never values."""
+    sfile = home / ".config/engineering-os/secrets.env"
+    vals = parse_env_file(sfile)
+    full = load_mcp_spec(eos_home)
+    on = {n: sv for t, p in profiles.items() for n, sv in profile_servers(full, p, t).items()}
+    need = sorted({x for sv in on.values() for x in server_needs(sv)})
+    later = sorted(
+        {x for n, sv in full["servers"].items() if sv.get("enabled", True) and n not in on for x in server_needs(sv)}
+        - set(need)
+    )
+    empty = [x for x in need if not vals.get(x) and not os.environ.get(x)]
+    later_empty = [x for x in later if not vals.get(x) and not os.environ.get(x)]
+    steps: list[str] = []
+    if empty or later_empty:
+        msg = f"Keys: in {sfile}, fill " + (", ".join(empty) + " (used now)" if empty else "")
+        if later_empty:
+            msg += ("; later, " if empty else "") + ", ".join(later_empty) + " (only for other `eos mcp use` profiles)"
+        if IS_WINDOWS:
+            msg += ". Re-run bootstrap.ps1: it also copies the keys Cursor uses into your user environment variables"
+        steps.append(
+            msg
+            + (" (then restart Cursor)" if IS_WINDOWS else ". Then re-run bootstrap")
+            + ". Keep a copy in a password manager; never commit them."
+        )
+    if "cline" in tools:
+        steps.append(
+            ("Cline is installed. " if cline_ok else "Install Cline: Cursor > Extensions > search 'Cline' > Install. ")
+            + "Restart Cursor, press Ctrl+Shift+P (macOS: Cmd+Shift+P), run 'Cline: Focus on View'."
+        )
+        steps.append(
+            "In Cline pick 'Bring my own API key' > API Provider 'OpenRouter' > paste your OpenRouter key. "
+            "That key lives in Cline's settings, not in secrets.env."
+        )
+        steps.append(
+            "Models (tick 'Use different models for Plan and Act modes'; OpenRouter prices per million tokens, "
+            "as of Oct 2026): "
+            + "; ".join(f"{mode} = {mid} ({price}), reasoning {eff}" for mode, mid, eff, price in CLINE_MODELS)
+            + ". Test: type 'say hello' in Cline."
+        )
+    steps.append("Check the machine: open a NEW terminal and run `eos doctor`.")
+    steps.append(
+        "Open a project folder in Cursor, open its terminal, run `eos adopt` (existing code) or "
+        "`eos start` (new idea), then `eos next`."
+    )
+    return [f"{i}. {s}" for i, s in enumerate(steps, 1)]
+
+
 LAUNCH_PY = "import sys; sys.path.insert(0, r{q}{d}{q}); import eos; sys.exit(eos.main())"
 
 
@@ -12710,6 +12816,11 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
         log.append(f"git core.hooksPath -> {hooks} (gitleaks everywhere + each repo's pre-commit config)")
     if args.install_clis:
         log += install_clis(dry)
+    # 6. Cline extension into Cursor (only when Cline is one of the tools; never fatal)
+    cline_ok = None
+    if "cline" in tools and not args.no_cline_install:
+        cline_ok, line = install_cline(home, not args.home, dry)  # --home (tests): never the real Cursor
+        log.append(line)
     state.update(
         {
             "eos_version": eos_version(eos_home),
@@ -12724,7 +12835,10 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
     print(f"eos bootstrap ({'DRY RUN, ' if dry else ''}tools: {', '.join(tools)}, home: {home})")
     for ln in log:
         print("  " + ln)
-    print("  next: fill secrets.env -> re-run bootstrap -> `eos doctor` -> `eos init` in a project.")
+    profs = tool_profiles(load_mcp_spec(eos_home), state, tools)
+    print("\nWhat only you can do now (full guide: docs/NEW-MACHINE.md):")
+    for ln in human_checklist(home, eos_home, tools, profs, cline_ok):
+        print("  " + ln)
     return 0
 
 
@@ -13239,6 +13353,7 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--global-hooks", action="store_true", help="point git core.hooksPath at eos git-hooks")
     b.add_argument("--install-clis", action="store_true", help="install CLIs with brew; elsewhere print commands")
     b.add_argument("--no-mcp", action="store_true", help="skip MCP config rendering")
+    b.add_argument("--no-cline-install", action="store_true", help="don't install the Cline extension into Cursor")
     b.add_argument("--dry-run", action="store_true")
     b.set_defaults(fn=cmd_bootstrap)
 

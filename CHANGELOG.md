@@ -2,6 +2,17 @@
 All notable changes to engineering-os. Format: Keep a Changelog · Versioning: SemVer.
 
 ## [Unreleased]
+### Added: reproducible new-machine setup
+- `eos bootstrap` installs the Cline extension (`saoudrizwan.claude-dev`) into Cursor through Cursor's CLI when Cline is
+  one of the tools (the default): `cursor` on PATH, else the default install folder per OS. Idempotent (skipped when
+  `--list-extensions` lists it), never fatal (prints the manual step), `--no-cline-install` to skip. With `--home`
+  (tests) only that folder is searched, so the real Cursor is never touched.
+- Bootstrap ends with "What only you can do now": empty key names in `secrets.env` (never values), Cline provider and
+  recommended Plan/Act models with OpenRouter prices (as of Oct 2026), `eos doctor`, then `eos adopt` / `eos start`.
+- `bootstrap.ps1` copies the keys `~\.cursor\mcp.json` references (`${env:NAME}`) from `secrets.env` into Windows
+  user environment variables, so Cursor started from the Start menu sees them (`-NoEnv` skips it).
+- `docs/NEW-MACHINE.md`: one page, blank PC to Cursor + Cline + eos, linked from README and GUIDE.
+
 ### Fixed: Windows and macOS portability (first public CI run)
 - UTF-8 everywhere: every `open()`, `read_text`/`write_text` and text-mode subprocess call in `bin/eos.py`, the
   scaffolds and the tests passes `encoding="utf-8"` (written files also use `newline="\n"`, so output is the same
