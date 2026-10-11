@@ -48,7 +48,9 @@ def main() -> None:
                             "GIT_COMMITTER_EMAIL": "a@x", "PATH": "/usr/bin:/bin"})  # fmt: skip
         subprocess.run(["git", "switch", "-qc", "feat/refunds"], cwd=root, check=True)
         (root / ".eos").mkdir()
-        (root / ".eos/config.json").write_text(json.dumps({"push_policy": "feature-branches"}))
+        (root / ".eos/config.json").write_text(
+            json.dumps({"push_policy": "feature-branches"}), encoding="utf-8", newline="\n"
+        )
         sys.path.insert(0, str(repo / "bin"))
         import eos
 

@@ -145,12 +145,12 @@ def coverage() -> dict:
 def main() -> int:
     tw: set[str] = set()
     if arg("--tailwind"):
-        tw = {h.lower() for h in re.findall(r"#[0-9a-fA-F]{6}\b", Path(arg("--tailwind")).read_text())}
+        tw = {h.lower() for h in re.findall(r"#[0-9a-fA-F]{6}\b", Path(arg("--tailwind")).read_text(encoding="utf-8"))}
     res = {"palettes": palettes(tw), "fonts": fonts(), "spec_palettes": spec_palettes(), "coverage": coverage(),
            "tailwind_hexes_loaded": len(tw)}  # fmt: skip
     print(json.dumps(res, indent=1))
     if arg("--json"):
-        Path(arg("--json")).write_text(json.dumps(res, indent=1) + "\n")
+        Path(arg("--json")).write_text(json.dumps(res, indent=1) + "\n", encoding="utf-8", newline="\n")
     return 0
 
 

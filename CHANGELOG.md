@@ -1,6 +1,31 @@
 # Changelog
 All notable changes to engineering-os. Format: Keep a Changelog · Versioning: SemVer.
 
+## [Unreleased]
+### Fixed: Windows and macOS portability (first public CI run)
+- UTF-8 everywhere: every `open()`, `read_text`/`write_text` and text-mode subprocess call in `bin/eos.py`, the
+  scaffolds and the tests passes `encoding="utf-8"` (written files also use `newline="\n"`, so output is the same
+  on every OS). eos's own generated files were already UTF-8; the CI mojibake (`Â·`, `â‰¥`) and the `0xb7` decode
+  errors came from tests reading and writing with Windows' default cp1252. eos's stdio switches to UTF-8 on any
+  platform whose console or `PYTHONIOENCODING` is not UTF-8.
+- Command lookup honours PATHEXT: `run()` resolves bare program names with `shutil.which`, so `npx`, `claude`, `npm`
+  find their `.cmd` shims on Windows (also for hook commands and the pre-commit warm-up). Command strings are split
+  without eating Windows backslashes (`split_cmd`), so `C:\...\python.exe lint.py` ratchets work.
+- `eos doctor`: a tool that is found but does not run is no longer reported `ok ... not found`; missing optional
+  tools show `-`.
+- Paths in messages and comparisons are POSIX (`app/orders/page.tsx`, not `app\orders\page.tsx`); docker/podman
+  mount sources use forward slashes; MCP launcher paths under `{EOS_HOME}` use native separators.
+- Editor (Cursor, VS Code) User folders per OS: `~/Library/Application Support/<app>/User` on macOS,
+  `%APPDATA%\<app>\User` on Windows (only for the real home, so `--home <dir>` never touches the real profile),
+  `~/.config/<app>/User` on Linux.
+- `scripts/db/alembic_squawk.py` scaffold resolves `ALEMBIC`/`SQUAWK` with `shutil.which` and keeps Windows paths;
+  a missing command is a clear exit 2, not a traceback.
+- With PyYAML installed, malformed YAML contracts are reported like the built-in parser does (no traceback).
+- Tests: no background git gc/maintenance in temp repos (flaky `Directory not empty: .git`); per-OS editor folders;
+  quoted interpreter paths. New `Portability` tests: a static check that no I/O relies on the default encoding,
+  key commands run under `PYTHONIOENCODING=cp1252` with `-X warn_default_encoding -W error::EncodingWarning`,
+  simulated-Windows path rendering, `split_cmd`, PATHEXT lookup, doctor statuses, editor folders per OS.
+
 ## [0.7.1] - 2026-10-11
 Two guarded MCP servers (read-only local Postgres, localhost-only browser) and an honest efficiency evaluation of
 the whole system, with the fixes it found. v0.7.1 is faster than v0.6.0 on every measured path; always-on context

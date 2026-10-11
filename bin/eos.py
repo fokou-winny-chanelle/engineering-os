@@ -152,7 +152,26 @@ def write(p: Path, text: str, mode: int | None = None) -> None:
         os.chmod(p, mode)
 
 
+def resolve_argv(argv: list[str]) -> list[str]:
+    """Resolve a bare program name on PATH. shutil.which honours PATHEXT, so on Windows `npx` becomes
+    C:\\Program Files\\nodejs\\npx.cmd (CreateProcess alone only tries .exe). Paths are left alone."""
+    if argv and argv[0] and not os.path.dirname(argv[0]):
+        found = shutil.which(argv[0])
+        if found:
+            return [found, *argv[1:]]
+    return argv
+
+
+def split_cmd(cmd: str) -> list[str]:
+    """Split a command line. On Windows backslashes are path separators, not escapes, so split
+    non-POSIX and drop the surrounding quotes (POSIX splitting turns C:\\tools\\x.exe into C:toolsx.exe)."""
+    if not IS_WINDOWS:
+        return shlex.split(cmd)
+    return [w[1:-1] if len(w) > 1 and w[0] == w[-1] and w[0] in "\"'" else w for w in shlex.split(cmd, posix=False)]
+
+
 def run(cmd: list[str], cwd: Path | None = None, timeout: int = 60, env: dict | None = None) -> tuple[int, str]:
+    cmd = resolve_argv(cmd)
     try:
         r = subprocess.run(
             cmd,
@@ -1912,7 +1931,11 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
                     (root / ".eos/state").mkdir(parents=True, exist_ok=True)
                     log = open(root / ".eos/state/hook-warm.log", "w", encoding="utf-8")  # noqa: SIM115
                     subprocess.Popen(
-                        ["pre-commit", "install-hooks"], cwd=root, stdout=log, stderr=log, start_new_session=True
+                        resolve_argv(["pre-commit", "install-hooks"]),
+                        cwd=root,
+                        stdout=log,
+                        stderr=log,
+                        start_new_session=True,
                     )
                     hooks_note += "; downloading hook tools in the background"
                 except OSError:
@@ -2089,17 +2112,19 @@ def cmd_new(args: argparse.Namespace) -> int:
     if args.kind == "design":
         dest = root / "docs/design/direction.md"
         if dest.exists():
-            eprint(f"{dest.relative_to(root)} exists: edit it (change direction on purpose, in its own PR)")
+            eprint(f"{dest.relative_to(root).as_posix()} exists: edit it (change direction on purpose, in its own PR)")
             return 1
         if not home:
             eprint("needs the engineering-os repo (set EOS_HOME)")
             return 2
         body = read(home / "core/templates/design/direction.md").replace("<product>", args.title or root.name, 1)
         if args.dry_run:
-            print(f"would create {dest.relative_to(root)}")
+            print(f"would create {dest.relative_to(root).as_posix()}")
             return 0
         write(dest, body)
-        print(f"created {dest.relative_to(root)}: fill it, critique it against the rejected defaults, get approval")
+        print(
+            f"created {dest.relative_to(root).as_posix()}: fill it, critique it against the rejected defaults, get approval"
+        )
         return 0
     if not args.title:
         eprint(f'eos new {args.kind} needs a title, e.g. eos new {args.kind} "Offline sync"')
@@ -2110,15 +2135,17 @@ def cmd_new(args: argparse.Namespace) -> int:
             return 2
         dest = root / f"docs/design/critiques/{today}-{_slug(args.title)}.md"
         if dest.exists():
-            eprint(f"{dest.relative_to(root)} exists: add the next round to it")
+            eprint(f"{dest.relative_to(root).as_posix()} exists: add the next round to it")
             return 1
         body = read(home / "core/templates/design/critique.md").replace("<screen>", args.title, 1)
         body = body.replace("YYYY-MM-DD", today, 1)
         if args.dry_run:
-            print(f"would create {dest.relative_to(root)}")
+            print(f"would create {dest.relative_to(root).as_posix()}")
             return 0
         write(dest, body)
-        print(f"created {dest.relative_to(root)}: screenshot, score each row against the rubric, fix, repeat")
+        print(
+            f"created {dest.relative_to(root).as_posix()}: screenshot, score each row against the rubric, fix, repeat"
+        )
         return 0
     if args.kind in ("migration", "service", "module"):
         if not home:
@@ -2139,10 +2166,10 @@ def cmd_new(args: argparse.Namespace) -> int:
         body = read(tpl).replace("NNNN", f"{n:04d}", 1).replace("<plan title>", args.title, 1)
         body = body.replace("active | done | abandoned", "active", 1).replace("YYYY-MM-DD", today, 2)
         if args.dry_run:
-            print(f"would create {dest.relative_to(root)}")
+            print(f"would create {dest.relative_to(root).as_posix()}")
             return 0
         write(dest, body)
-        print(f"created {dest.relative_to(root)}  (when finished: git mv it to docs/plans/completed/)")
+        print(f"created {dest.relative_to(root).as_posix()}  (when finished: git mv it to docs/plans/completed/)")
         return 0
     if args.kind == "adr":
         folder, tpl = root / "docs/adr", root / "docs/adr/0000-template.md"
@@ -2161,16 +2188,16 @@ def cmd_new(args: argparse.Namespace) -> int:
     body = body.replace("YYYY-MM-DD", today, 1).replace("proposed | accepted | superseded by NNNN", "proposed", 1)
     body = body.replace("draft | ready | in progress | review | done", "draft", 1)
     if args.dry_run:
-        print(f"would create {dest.relative_to(root)}")
+        print(f"would create {dest.relative_to(root).as_posix()}")
         return 0
     write(dest, body)
-    print(f"created {dest.relative_to(root)}")
+    print(f"created {dest.relative_to(root).as_posix()}")
     if args.kind == "adr":
         idx = folder / "INDEX.md"
         line = f"| {n:04d} | [{args.title}]({dest.name}) | proposed | {today} |"
         cur = read(idx) if idx.exists() else read(home / "core/templates/adr/INDEX.md") if home else ""
         write(idx, cur.rstrip("\n") + "\n" + line + "\n")
-        print(f"  + INDEX line in {idx.relative_to(root)} (set status to accepted when decided)")
+        print(f"  + INDEX line in {idx.relative_to(root).as_posix()} (set status to accepted when decided)")
     return 0
 
 
@@ -2245,7 +2272,7 @@ def _resync(root: Path) -> None:
     if not load_manifest(root):
         return
     ns = argparse.Namespace(dir=str(root), check=False, dry_run=False, force=False)
-    with open(os.devnull, "w") as devnull:
+    with open(os.devnull, "w", encoding="utf-8") as devnull:
         old = sys.stdout
         sys.stdout = devnull
         try:
@@ -2977,7 +3004,7 @@ def cmd_scaffold(args: argparse.Namespace) -> int:
             data = None
         if data is not None and not out.exists() and not slo_problems(root, data, cfg)[0]:
             out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(slo_alert_rules(data, cfg), encoding="utf-8")
+            out.write_text(slo_alert_rules(data, cfg), encoding="utf-8", newline="\n")
             w.report.append(("created", cfg["generated_rules"]))
     print(f"eos scaffold {args.kind}: {what}{' (DRY RUN)' if args.dry_run else ''}")
     for status, rel in w.report:
@@ -3282,7 +3309,7 @@ def _counter(fps: list[str]) -> dict[str, int]:
 def ratchet_run(root: Path, chk: dict, timeout: int = 900) -> tuple[str, list[str], str]:
     """(status, fingerprints, note). status: ok | skipped."""
     cmd = chk["cmd"]
-    exe = shlex.split(cmd)[0] if cmd.strip() else ""
+    exe = split_cmd(cmd)[0] if cmd.strip() else ""
     if exe and not shutil.which(exe) and not (root / chk.get("cwd", ".") / exe).exists():
         return "skipped", [], f"not installed: {exe}"
     cwd = root / chk.get("cwd", ".")
@@ -3715,7 +3742,9 @@ def scan_repo(root: Path, stacks: dict) -> dict:
     for rel in list(iter_files(root, 6))[:5000]:
         if rel.suffix in CODE_EXT:
             try:
-                todo += len(re.findall(r"\b(TODO|FIXME|HACK|XXX)\b", (root / rel).read_text(errors="ignore")))
+                todo += len(
+                    re.findall(r"\b(TODO|FIXME|HACK|XXX)\b", (root / rel).read_text(errors="ignore", encoding="utf-8"))
+                )
             except OSError:
                 pass
     deps_bot = [x for x in (".github/renovate.json", "renovate.json", ".github/dependabot.yml") if (root / x).exists()]
@@ -4882,7 +4911,7 @@ def cmd_workspace(args: argparse.Namespace) -> int:
         if not args.dry_run:
             write(dest, body)
         print(
-            f"created {dest.relative_to(root)}: same branch `change/{n:04d}-{slug}` in {', '.join(r['name'] for r in picked)}"
+            f"created {dest.relative_to(root).as_posix()}: same branch `change/{n:04d}-{slug}` in {', '.join(r['name'] for r in picked)}"
         )
         print("  merge order = table order (contracts/providers first). Each PR links this plan and the other PRs.")
         return 0
@@ -5530,7 +5559,7 @@ def log_event(root: Path, kind: str, **data) -> None:
             fh.write(json.dumps({"t": round(time.time(), 1), "k": kind, **data}, separators=(",", ":")) + "\n")
         if p.stat().st_size > 1_000_000:
             lines = p.read_text(encoding="utf-8").splitlines()
-            p.write_text("\n".join(lines[len(lines) // 2 :]) + "\n", encoding="utf-8")
+            p.write_text("\n".join(lines[len(lines) // 2 :]) + "\n", encoding="utf-8", newline="\n")
     except OSError:
         pass
 
@@ -5740,7 +5769,11 @@ def cmd_hook_run(args: argparse.Namespace) -> int:
         argv = cmd + files
     root = Path.cwd()
     t = time.time()
-    rc = subprocess.call(argv, cwd=root / d if d not in (".", "") else root)
+    try:
+        rc = subprocess.call(resolve_argv(argv), cwd=root / d if d not in (".", "") else root)
+    except FileNotFoundError:
+        eprint(f"eos hook: not found: {argv[0] if argv else '?'}")
+        rc = 127
     log_event(root, "hook", id=args.id or (argv[0] if argv else "?"), ms=int((time.time() - t) * 1000), rc=rc)
     return rc
 
@@ -7470,16 +7503,16 @@ def cmd_quarantine(args: argparse.Namespace) -> int:
         )
         path.parent.mkdir(parents=True, exist_ok=True)
         write(path, json.dumps(data, indent=2) + "\n")
-        print(f"quarantined {args.id} until {data['tests'][-1]['expires']} ({path.relative_to(root)})")
+        print(f"quarantined {args.id} until {data['tests'][-1]['expires']} ({path.relative_to(root).as_posix()})")
         print("  it still runs, but cannot fail the build; this change needs human review (test integrity)")
         return 0
     if not path.exists():
-        print(f"eos quarantine: no {path.relative_to(root)} (nothing quarantined)")
+        print(f"eos quarantine: no {path.relative_to(root).as_posix()} (nothing quarantined)")
         return 0
     try:
         data = json.loads(read(path))
     except ValueError as exc:
-        print(f"eos quarantine: {path.relative_to(root)} is not valid JSON: {exc}")
+        print(f"eos quarantine: {path.relative_to(root).as_posix()} is not valid JSON: {exc}")
         return 1
     probs, active = quarantine_problems(data, max_days)
     if args.action == "list":
@@ -8085,11 +8118,13 @@ def cmd_ops(args: argparse.Namespace) -> int:
             return 2
         p = root / cfg["runbook_dir"] / f"{args.name.lower()}.md"
         if p.exists():
-            print(f"exists: {p.relative_to(root)}")
+            print(f"exists: {p.relative_to(root).as_posix()}")
             return 0
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(RUNBOOK_TEMPLATE.format(name=args.name, today=_today().isoformat()), encoding="utf-8")
-        print(f"wrote {p.relative_to(root)}: fill in the commands and owner")
+        p.write_text(
+            RUNBOOK_TEMPLATE.format(name=args.name, today=_today().isoformat()), encoding="utf-8", newline="\n"
+        )
+        print(f"wrote {p.relative_to(root).as_posix()}: fill in the commands and owner")
         return 0
     if not sf.is_file():
         eprint(f"no {cfg['slo_file']} (eos scaffold ops writes an example)")
@@ -8120,12 +8155,14 @@ def cmd_ops(args: argparse.Namespace) -> int:
     if args.check:
         ok = out.is_file() and read(out) == text
         print(
-            f"eos ops alerts: {'up to date' if ok else 'OUT OF DATE (run `eos ops alerts`)'}: {out.relative_to(root)}"
+            f"eos ops alerts: {'up to date' if ok else 'OUT OF DATE (run `eos ops alerts`)'}: {out.relative_to(root).as_posix()}"
         )
         return 0 if ok else 1
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(text, encoding="utf-8")
-    print(f"wrote {out.relative_to(root)} ({text.count('- alert:')} alerts); validate: promtool check rules {out}")
+    out.write_text(text, encoding="utf-8", newline="\n")
+    print(
+        f"wrote {out.relative_to(root).as_posix()} ({text.count('- alert:')} alerts); validate: promtool check rules {out}"
+    )
     return 0
 
 
@@ -8252,10 +8289,10 @@ def i18n_catalogs(root: Path, cfg: dict) -> tuple[Path | None, dict[str, dict], 
                 try:
                     data = json.loads(read(p))
                 except ValueError as exc:
-                    errs.append(f"{p.relative_to(root)}: invalid JSON ({exc})")
+                    errs.append(f"{p.relative_to(root).as_posix()}: invalid JSON ({exc})")
                     continue
                 if not isinstance(data, dict):
-                    errs.append(f"{p.relative_to(root)}: top level must be an object")
+                    errs.append(f"{p.relative_to(root).as_posix()}: top level must be an object")
                     continue
                 _flatten_messages(data, p.stem if nested and not files else "", leaves, objs)
             cats[loc] = {"leaves": leaves, "objects": objs}
@@ -8396,7 +8433,7 @@ def i18n_code_keys(root: Path, cfg: dict) -> list[tuple[str, str, bool]]:
                     else:
                         full = f"{ns}.{key}" if ns else key
                     line = src.count("\n", 0, m.start()) + 1
-                    found.append((f"{p.relative_to(root)}:{line}", full, i18next))
+                    found.append((f"{p.relative_to(root).as_posix()}:{line}", full, i18next))
     return found
 
 
@@ -8409,7 +8446,7 @@ def i18n_problems(root: Path, cfg: dict | None = None) -> tuple[list[str], list[
     warns: list[str] = []
     if d is None:
         return errs, warns, "no translation catalogs found"
-    rel = d.relative_to(root)
+    rel = d.relative_to(root).as_posix()
     locales = sorted(cats)
     want = cfg["i18n"]["default_locale"]
     ref = want if want in cats else next((x for x in ("en", "fr") if x in cats), locales[0] if locales else "")
@@ -8554,9 +8591,13 @@ def cmd_bundle_size(args: argparse.Namespace) -> int:
         out = root / cfg["bundle"]["baseline"]
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(
-            json.dumps({"dir": d, **cur, "updated": _today().isoformat()}, indent=2) + "\n", encoding="utf-8"
+            json.dumps({"dir": d, **cur, "updated": _today().isoformat()}, indent=2) + "\n",
+            encoding="utf-8",
+            newline="\n",
         )
-        print(f"wrote {out.relative_to(root)}: js {cur['js'] / 1024:,.1f} KiB, css {cur['css'] / 1024:,.1f} KiB gzip")
+        print(
+            f"wrote {out.relative_to(root).as_posix()}: js {cur['js'] / 1024:,.1f} KiB, css {cur['css'] / 1024:,.1f} KiB gzip"
+        )
         return 0
     errs, lines = bundle_problems(root, cfg, measured)
     print(f"eos bundle-size: {d} ({cur['files']} files)")
@@ -9039,9 +9080,12 @@ def cmd_mobile(args: argparse.Namespace) -> int:
         out = root / cfg["size_baseline"]
         out.parent.mkdir(parents=True, exist_ok=True)
         data = {k: {"bytes": v["bytes"], "path": v["path"]} for k, v in measured.items()}
-        out.write_text(json.dumps({**data, "updated": _today().isoformat()}, indent=2) + "\n", encoding="utf-8")
+        out.write_text(
+            json.dumps({**data, "updated": _today().isoformat()}, indent=2) + "\n", encoding="utf-8", newline="\n"
+        )
         print(
-            f"wrote {out.relative_to(root)}: " + ", ".join(f"{k} {v['bytes'] / 1e6:,.2f} MB" for k, v in data.items())
+            f"wrote {out.relative_to(root).as_posix()}: "
+            + ", ".join(f"{k} {v['bytes'] / 1e6:,.2f} MB" for k, v in data.items())
         )
         return 0
     errs, lines = app_size_problems(root, cfg, measured)
@@ -9392,7 +9436,9 @@ def cmd_llm(args: argparse.Namespace) -> int:
     try:
         gate = json.loads(read(gpath))
     except (OSError, ValueError) as exc:
-        eprint(f"eos llm gate: cannot read gate config {gpath.relative_to(root)}: {exc} (`eos scaffold llm-evals`)")
+        eprint(
+            f"eos llm gate: cannot read gate config {gpath.relative_to(root).as_posix()}: {exc} (`eos scaffold llm-evals`)"
+        )
         return 2
     bpath = root / gate["baseline"] if gate.get("baseline") else None
     baseline = None
@@ -9400,7 +9446,7 @@ def cmd_llm(args: argparse.Namespace) -> int:
         try:
             baseline = json.loads(read(bpath))
         except ValueError as exc:
-            eprint(f"eos llm gate: invalid baseline {bpath.relative_to(root)}: {exc}")
+            eprint(f"eos llm gate: invalid baseline {bpath.relative_to(root).as_posix()}: {exc}")
             return 2
     errs, info, summary = llm_gate_problems(results, gate, None if args.update else baseline)
     if args.update:
@@ -9413,8 +9459,12 @@ def cmd_llm(args: argparse.Namespace) -> int:
             eprint('eos llm gate --update: set "baseline" in the gate config (e.g. "evals/llm/baseline.json")')
             return 2
         bpath.parent.mkdir(parents=True, exist_ok=True)
-        bpath.write_text(json.dumps({**summary, "updated": _today().isoformat()}, indent=1) + "\n", encoding="utf-8")
-        print(f"wrote {bpath.relative_to(root)}: pass rate {summary['pass_rate']:.2f}, {len(summary['cases'])} cases")
+        bpath.write_text(
+            json.dumps({**summary, "updated": _today().isoformat()}, indent=1) + "\n", encoding="utf-8", newline="\n"
+        )
+        print(
+            f"wrote {bpath.relative_to(root).as_posix()}: pass rate {summary['pass_rate']:.2f}, {len(summary['cases'])} cases"
+        )
         print("  commit it in its own reviewed change (like a snapshot update)")
         return 0
     for ln in info:
@@ -9789,10 +9839,12 @@ def load_yaml_or_json(text: str, name: str = "") -> object:
         return json.loads(text)
     try:
         import yaml  # type: ignore[import-untyped]  # optional
-
-        return _plain_data(yaml.safe_load(text))
     except ImportError:
         return yaml_subset_load(text)
+    try:
+        return _plain_data(yaml.safe_load(text))
+    except yaml.YAMLError as exc:  # same contract as the subset parser: callers catch ValueError
+        raise ValueError(" ".join(str(exc).split())) from None
 
 
 def data_contract_files(root: Path, cfg: dict) -> list[Path]:
@@ -11389,7 +11441,7 @@ def ab_score(home: Path, ws: Path, seed: str | None = None, shoot: bool = False)
                 for p in dst.rglob("*"):
                     if p.is_file() and p.suffix in (".md", ".html", ".css", ".json") and AB_LEAK_RX.search(read(p)):
                         msgs.append(
-                            f"blinding leak: {p.relative_to(sc)} names the studio; hide that text before scoring"
+                            f"blinding leak: {p.relative_to(sc).as_posix()} names the studio; hide that text before scoring"
                         )
             else:
                 msgs.append(f"missing: {arm}/screens/{spec}")
@@ -11692,7 +11744,7 @@ def studio_sandbox_cmd(backend: str, image: str, mounts: list[tuple[Path, str, b
         for k, v in env.items():
             cmd += ["-e", f"{k}={v}"]
         for src, dst, rw in mounts:
-            cmd += ["-v", f"{src}:{dst}:{'rw' if rw else 'ro'}"]
+            cmd += ["-v", f"{Path(src).as_posix()}:{dst}:{'rw' if rw else 'ro'}"]  # Docker Desktop takes C:/x
         return [*cmd, image, *argv]
     cmd = ["bwrap", "--unshare-all", "--die-with-parent", "--new-session", "--clearenv",
            "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp"]  # fmt: skip
@@ -12002,7 +12054,7 @@ def cmd_studio(args: argparse.Namespace) -> int:
         dest = root / STUDIO_DIR / "out" / f"{slug}.tokens.json"
         write(dest, json.dumps(doc, indent=1) + "\n")
         errs, warns = studio_palette_review(doc, ds)
-        print(f"draft tokens: {dest.relative_to(root)} ({len(doc['color']) - 1} colours; style: "
+        print(f"draft tokens: {dest.relative_to(root).as_posix()} ({len(doc['color']) - 1} colours; style: "
               f"{(ds.get('style') or {}).get('name', '?')}; type: {(ds.get('typography') or {}).get('heading', '?')})")  # fmt: skip
         for e in errs:
             print("  error: " + e)
@@ -12067,17 +12119,25 @@ def parse_env_file(p: Path) -> dict[str, str]:
 VAR_RX = _lazy_rx(r"\$\{([A-Z0-9_]+)\}")
 
 
+def editor_user_dir(home: Path, app: str) -> Path:
+    """A VS Code-family editor's User folder: ~/Library/Application Support/<app>/User on macOS,
+    %APPDATA%\\<app>\\User on Windows, ~/.config/<app>/User elsewhere. %APPDATA% is only used for the
+    real home, so `--home <dir>` (and the tests) never touch the real profile."""
+    sysname = platform.system()
+    if sysname == "Darwin":
+        return home / "Library" / "Application Support" / app / "User"
+    if sysname == "Windows":
+        appdata = os.environ.get("APPDATA")
+        same_home = home.expanduser().resolve() == Path.home().resolve()
+        return (Path(appdata) if appdata and same_home else home / "AppData" / "Roaming") / app / "User"
+    return home / ".config" / app / "User"
+
+
 def editor_globalstorage_files(home: Path) -> list[Path]:
     """Cline's MCP settings file inside each installed VS Code-family editor (Cursor, VS Code)."""
-    sysname = platform.system()
     out = []
     for app in ("Cursor", "Code"):
-        if sysname == "Darwin":
-            base = home / "Library/Application Support" / app / "User"
-        elif sysname == "Windows":
-            base = Path(os.environ.get("APPDATA", home / "AppData/Roaming")) / app / "User"
-        else:
-            base = home / ".config" / app / "User"
+        base = editor_user_dir(home, app)
         if base.is_dir():
             out.append(base / "globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json")
     return out
@@ -12299,7 +12359,11 @@ def mcp_launch_cmd(
     """(argv, env, notes) for an eos-launched server; raises SystemExit with the reason when it must refuse."""
     env = dict(os.environ)
     notes: list[str] = []
-    argv = [a.replace("{EOS_HOME}", str(eos_home)) for a in server["run"]]
+    argv = [
+        str(eos_home.joinpath(*a[len("{EOS_HOME}/") :].split("/"))) if a.startswith("{EOS_HOME}/") else a
+        for a in server["run"]
+    ]  # native separators on Windows (no mixed D:\\x/mcp/...)
+    argv = [a.replace("{EOS_HOME}", str(eos_home)) for a in argv]
     guard = server.get("guard")
     if guard == "postgres":
         url = secret_or_env("POSTGRES_MCP_URL", home)
@@ -12974,7 +13038,7 @@ def doctor_project(root: Path, eos_home: Path | None) -> list[tuple[str, str]]:
                 ),
             )
         )
-    news = [str(p.relative_to(root)) for p in root.rglob("*.eos-new") if ".git" not in p.parts][:5]
+    news = [p.relative_to(root).as_posix() for p in root.rglob("*.eos-new") if ".git" not in p.parts][:5]
     if news:
         out.append(("fix", f"unmerged eos updates: {', '.join(news)} (merge, delete .eos-new, `eos sync`)"))
     agents = read(root / "AGENTS.md") if (root / "AGENTS.md").exists() else ""
@@ -13002,10 +13066,11 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         + ("" if v >= (3, 11) else "  (3.11+ needed for `eos models`)")
     )
     for name, (lvl, why, *_r) in DOCTOR_TOOLS.items():
-        exe = shutil.which(name)
+        exe = shutil.which(name)  # honours PATHEXT: finds npx.cmd / claude.cmd on Windows
+        code, out = (127, "")
         if exe:
-            vcmd = [name, "version"] if name == "gitleaks" else [name, "--version"]
-            _, out = run(vcmd, timeout=15)
+            code, out = run([exe, "version" if name == "gitleaks" else "--version"], timeout=15)
+        if exe and code != 127:
             first = out.strip().splitlines()[0][:60] if out.strip() else ""
             print(f"  ok       {name:<11} {first}")
         elif lvl == "optional":
@@ -13575,11 +13640,13 @@ GUARD_MODES = (
 
 
 def utf8_stdio() -> None:
-    """Windows: piped stdin/stdout (agent hooks, CI, `| more`) default to the ANSI code page, so printing → or …
-    raised UnicodeEncodeError and hook JSON with non-ASCII paths was mis-decoded. Use UTF-8 everywhere."""
-    if not IS_WINDOWS:
-        return
+    """Piped stdin/stdout on Windows (agent hooks, CI, `| more`) default to the ANSI code page (cp1252), so
+    printing → or … raised UnicodeEncodeError and hook JSON with non-ASCII paths was mis-decoded. The same
+    happens anywhere with PYTHONIOENCODING or a non-UTF-8 locale. Use UTF-8 for every non-UTF-8 stream."""
     for stream in (sys.stdin, sys.stdout, sys.stderr):
+        enc = (getattr(stream, "encoding", None) or "").lower().replace("_", "-")
+        if enc in ("utf-8", "utf8"):
+            continue
         try:
             stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
         except (AttributeError, ValueError, OSError):

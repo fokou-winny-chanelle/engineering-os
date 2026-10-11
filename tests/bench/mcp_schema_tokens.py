@@ -27,6 +27,8 @@ class McpClient:
             text=True,
             env=env,
             cwd=cwd,
+            encoding="utf-8",
+            errors="replace",
         )
         self.err = []
         self.msgs = {}

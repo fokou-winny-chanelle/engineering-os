@@ -25,6 +25,7 @@ from __future__ import annotations
 import ast
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -32,6 +33,18 @@ from pathlib import Path
 DEFAULT_EXCLUDES = ["require-lock-timeout", "require-statement-timeout", "prefer-robust-stmts"]
 SQUAWK = os.environ.get("SQUAWK", "npx -y squawk-cli@{{SQUAWK_VERSION}}")
 ALEMBIC = os.environ.get("ALEMBIC", "alembic")
+
+
+def command(cmd: str) -> list[str]:
+    """Split a command string and resolve its program on PATH (shutil.which honours PATHEXT, so `npx` finds
+    npx.cmd on Windows). Windows paths keep their backslashes."""
+    if os.name == "nt":
+        argv = [w[1:-1] if len(w) > 1 and w[0] == w[-1] and w[0] in "\"'" else w for w in shlex.split(cmd, posix=False)]
+    else:
+        argv = shlex.split(cmd)
+    if argv:
+        argv[0] = shutil.which(argv[0]) or argv[0]
+    return argv
 
 
 def revision_ids(source: str) -> tuple[str | None, object]:
@@ -104,8 +117,22 @@ def lint(path: Path, keep_timeouts: bool) -> int:
         print(f"{path}: no alembic.ini in any parent directory", file=sys.stderr)
         return 2
     rng = f"{down or 'base'}:{rev}"
+    try:
+        return _render_and_lint(path, ini_dir, rng, keep_timeouts)
+    except FileNotFoundError as exc:
+        print(f"{path}: command not found: {exc.filename or exc} (set ALEMBIC / SQUAWK)", file=sys.stderr)
+        return 2
+
+
+def _render_and_lint(path: Path, ini_dir: Path, rng: str, keep_timeouts: bool) -> int:
     r = subprocess.run(
-        [*shlex.split(ALEMBIC), "upgrade", rng, "--sql"], cwd=ini_dir, capture_output=True, text=True, check=False
+        [*command(ALEMBIC), "upgrade", rng, "--sql"],
+        cwd=ini_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+        encoding="utf-8",
+        errors="replace",
     )
     if r.returncode != 0:
         print(f"{path}: `alembic upgrade {rng} --sql` failed:\n{r.stderr.strip()}", file=sys.stderr)
@@ -113,16 +140,27 @@ def lint(path: Path, keep_timeouts: bool) -> int:
     excludes = sorted(
         set(([] if keep_timeouts else DEFAULT_EXCLUDES[:2]) + DEFAULT_EXCLUDES[2:] + config_excludes(ini_dir))
     )
-    cmd = [*shlex.split(SQUAWK), "--no-assume-in-transaction", "--reporter", "gcc", "--stdin-filepath", str(path)]
+    cmd = [*command(SQUAWK), "--no-assume-in-transaction", "--reporter", "gcc", "--stdin-filepath", str(path)]
     if excludes:
         cmd.append("--exclude=" + ",".join(excludes))
-    s = subprocess.run(cmd, input=strip_version_table(r.stdout), capture_output=True, text=True, check=False)
+    s = subprocess.run(
+        cmd,
+        input=strip_version_table(r.stdout),
+        capture_output=True,
+        text=True,
+        check=False,
+        encoding="utf-8",
+        errors="replace",
+    )
     sys.stdout.write(s.stdout)
     sys.stderr.write(s.stderr)
     return 0 if s.returncode == 0 else 1
 
 
 def main(argv: list[str]) -> int:
+    for stream in (sys.stdout, sys.stderr):  # a cp1252 Windows console must not crash on squawk's output
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     keep = "--keep-timeout-rules" in argv
     files = [Path(a) for a in argv if a != "--keep-timeout-rules"]
     if not files:

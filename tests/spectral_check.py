@@ -12,6 +12,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -20,14 +21,15 @@ from pathlib import Path
 
 def expected(path: Path) -> set[str]:
     codes: set[str] = set()
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         if line.startswith("# expect:"):
             codes |= set(re.findall(r"\beos-[a-z0-9-]+", line))
     return codes
 
 
 def run(ruleset: Path, fixture: Path) -> list[dict]:
-    cmd = shlex.split(os.environ.get("SPECTRAL", "npx --yes @stoplight/spectral-cli@6.17.0"))
+    cmd = shlex.split(os.environ.get("SPECTRAL", "npx --yes @stoplight/spectral-cli@6.17.0"), posix=os.name != "nt")
+    cmd[0] = shutil.which(cmd[0]) or cmd[0]  # PATHEXT: npx.cmd on Windows
     with tempfile.TemporaryDirectory() as td:
         out = Path(td) / "out.json"
         subprocess.run(
@@ -48,10 +50,12 @@ def run(ruleset: Path, fixture: Path) -> list[dict]:
             capture_output=True,
             text=True,
             check=False,
+            encoding="utf-8",
+            errors="replace",
         )
         if not out.exists():
             raise SystemExit(f"spectral produced no output for {fixture}")
-        return json.loads(out.read_text() or "[]")
+        return json.loads(out.read_text(encoding="utf-8") or "[]")
 
 
 def main(argv: list[str]) -> int:

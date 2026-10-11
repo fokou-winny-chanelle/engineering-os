@@ -20,11 +20,15 @@ proj, home = work / "proj", work / "home"
 (proj / "api/app/api/routes").mkdir(parents=True)
 (proj / "api/tests").mkdir(parents=True)
 (proj / "web/app").mkdir(parents=True)
-(proj / "api/pyproject.toml").write_text('[project]\nname="api"\ndependencies=["fastapi"]\n')
-(proj / "api/app/main.py").write_text("from fastapi import FastAPI\n")
-(proj / "web/package.json").write_text('{"name":"web","dependencies":{"next":"16.0.0","react":"19.0.0"}}\n')
-(proj / "web/tsconfig.json").write_text("{}\n")
-(proj / "web/next.config.ts").write_text("export default {}\n")
+(proj / "api/pyproject.toml").write_text(
+    '[project]\nname="api"\ndependencies=["fastapi"]\n', encoding="utf-8", newline="\n"
+)
+(proj / "api/app/main.py").write_text("from fastapi import FastAPI\n", encoding="utf-8", newline="\n")
+(proj / "web/package.json").write_text(
+    '{"name":"web","dependencies":{"next":"16.0.0","react":"19.0.0"}}\n', encoding="utf-8", newline="\n"
+)
+(proj / "web/tsconfig.json").write_text("{}\n", encoding="utf-8", newline="\n")
+(proj / "web/next.config.ts").write_text("export default {}\n", encoding="utf-8", newline="\n")
 subprocess.run(["git", "init", "-q", str(proj)], check=True)
 env = dict(os.environ, HOME=str(home), USERPROFILE=str(home))
 eos_py = str(repo / "bin/eos.py")

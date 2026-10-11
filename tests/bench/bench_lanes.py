@@ -25,7 +25,17 @@ env.pop("EOS_LANE", None)
 
 
 def sh(cmd, cwd=proj, stdin=None, check=True):
-    p = subprocess.run(cmd, cwd=cwd, env=env, input=stdin, capture_output=True, text=True, check=False)
+    p = subprocess.run(
+        cmd,
+        cwd=cwd,
+        env=env,
+        input=stdin,
+        capture_output=True,
+        text=True,
+        check=False,
+        encoding="utf-8",
+        errors="replace",
+    )
     if check and p.returncode != 0:
         raise SystemExit(f"failed: {cmd}\n{p.stdout}\n{p.stderr}")
     return p
@@ -45,28 +55,38 @@ def timed(fn, n=N):
 (proj / "web/app").mkdir(parents=True)
 (proj / "docs").mkdir()
 (proj / "api/pyproject.toml").write_text(
-    '[project]\nname="api"\nversion="0.1.0"\ndependencies=["fastapi"]\n\n[tool.pytest.ini_options]\npythonpath=["."]\n'
+    '[project]\nname="api"\nversion="0.1.0"\ndependencies=["fastapi"]\n\n[tool.pytest.ini_options]\npythonpath=["."]\n',
+    encoding="utf-8",
+    newline="\n",
 )
-(proj / "api/app/__init__.py").write_text("")
+(proj / "api/app/__init__.py").write_text("", encoding="utf-8", newline="\n")
 for i in range(60):
-    (proj / f"api/app/mod{i}.py").write_text(f'"""Module {i}."""\n\n\ndef f{i}(x: int) -> int:\n    return x + {i}\n')
-    (proj / f"api/tests/test_mod{i}.py").write_text(
-        f"from app.mod{i} import f{i}\n\n\ndef test_f{i}() -> None:\n    assert f{i}(1) == {i + 1}\n"
+    (proj / f"api/app/mod{i}.py").write_text(
+        f'"""Module {i}."""\n\n\ndef f{i}(x: int) -> int:\n    return x + {i}\n', encoding="utf-8", newline="\n"
     )
-(proj / "api/app/payments/__init__.py").write_text("")
+    (proj / f"api/tests/test_mod{i}.py").write_text(
+        f"from app.mod{i} import f{i}\n\n\ndef test_f{i}() -> None:\n    assert f{i}(1) == {i + 1}\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+(proj / "api/app/payments/__init__.py").write_text("", encoding="utf-8", newline="\n")
 (proj / "api/app/payments/refund.py").write_text(
-    '"""Refunds."""\n\n\ndef refund(cents: int) -> int:\n    return cents\n'
+    '"""Refunds."""\n\n\ndef refund(cents: int) -> int:\n    return cents\n', encoding="utf-8", newline="\n"
 )
 (proj / "api/tests/test_refund.py").write_text(
-    "from app.payments.refund import refund\n\n\ndef test_refund() -> None:\n    assert refund(5) == 5\n"
+    "from app.payments.refund import refund\n\n\ndef test_refund() -> None:\n    assert refund(5) == 5\n",
+    encoding="utf-8",
+    newline="\n",
 )
 (proj / "web/package.json").write_text(
     '{"name":"web","private":true,"scripts":{"lint":"echo lint","typecheck":"echo tc","test":"echo test"},'
-    '"dependencies":{"next":"16.0.0"}}\n'
+    '"dependencies":{"next":"16.0.0"}}\n',
+    encoding="utf-8",
+    newline="\n",
 )
-(proj / "web/pnpm-lock.yaml").write_text("lockfileVersion: '9.0'\n")
-(proj / "web/next.config.ts").write_text("export default {}\n")
-(proj / "docs/intro.md").write_text("# Intro\n\nHello wrold.\n")
+(proj / "web/pnpm-lock.yaml").write_text("lockfileVersion: '9.0'\n", encoding="utf-8", newline="\n")
+(proj / "web/next.config.ts").write_text("export default {}\n", encoding="utf-8", newline="\n")
+(proj / "docs/intro.md").write_text("# Intro\n\nHello wrold.\n", encoding="utf-8", newline="\n")
 sh(["git", "init", "-q", "-b", "main"])
 sh(["git", "config", "user.email", "b@example.com"])
 sh(["git", "config", "user.name", "bench"])
@@ -75,25 +95,31 @@ sh(
     check=False,
 )
 sh([sys.executable, str(repo / "bin/eos.py"), "init", str(proj), "--tools", "all", "--yes"])
-(tmp / "gitconfig").write_text("")
+(tmp / "gitconfig").write_text("", encoding="utf-8", newline="\n")
 env["GIT_CONFIG_GLOBAL"] = str(tmp / "gitconfig")
 sh(["git", "add", "-A"])
 sh(["git", "commit", "-qm", "chore: setup", "--no-verify"])
 sh(["pre-commit", "install", "--install-hooks"], check=False)
 eos = [sys.executable, ".eos/bin/eos.py"]
 out: dict = {
-    "eos": (repo / "VERSION").read_text().strip(),
+    "eos": (repo / "VERSION").read_text(encoding="utf-8").strip(),
     "rev": sh(["git", "-C", str(repo), "rev-parse", "--short", "HEAD"]).stdout.strip(),
     "runs": N,
     "fixture": "api/ 61 modules + 61 pytest tests, web/ Next.js stub, eos init --yes (all tools)",
 }
 SCEN = {
-    "trivial_docs_typo": lambda: (proj / "docs/intro.md").write_text("# Intro\n\nHello world.\n"),
+    "trivial_docs_typo": lambda: (proj / "docs/intro.md").write_text(
+        "# Intro\n\nHello world.\n", encoding="utf-8", newline="\n"
+    ),
     "standard_py_change": lambda: (proj / "api/app/mod1.py").write_text(
-        '"""Module 1."""\n\n\ndef f1(x: int) -> int:\n    """Add one."""\n    return x + 1\n'
+        '"""Module 1."""\n\n\ndef f1(x: int) -> int:\n    """Add one."""\n    return x + 1\n',
+        encoding="utf-8",
+        newline="\n",
     ),
     "risky_payments_change": lambda: (proj / "api/app/payments/refund.py").write_text(
-        '"""Refunds."""\n\n\ndef refund(cents: int) -> int:\n    """Full refund."""\n    return cents\n'
+        '"""Refunds."""\n\n\ndef refund(cents: int) -> int:\n    """Full refund."""\n    return cents\n',
+        encoding="utf-8",
+        newline="\n",
     ),
 }
 for name, change in SCEN.items():

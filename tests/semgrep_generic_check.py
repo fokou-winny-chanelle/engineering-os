@@ -45,7 +45,12 @@ def main(argv: list[str]) -> int:
                 shutil.copy(f, tmp)
         r = subprocess.run(
             [
-                *shlex.split(sg),
+                *(
+                    [
+                        shutil.which(a) or a if i == 0 else a
+                        for i, a in enumerate(shlex.split(sg, posix=os.name != "nt"))
+                    ]
+                ),
                 "scan",
                 "--config",
                 str(Path(rules).resolve()),
@@ -58,6 +63,8 @@ def main(argv: list[str]) -> int:
             capture_output=True,
             text=True,
             check=False,
+            encoding="utf-8",
+            errors="replace",
         )
     try:
         results = json.loads(r.stdout)["results"]
