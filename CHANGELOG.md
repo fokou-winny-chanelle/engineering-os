@@ -2,6 +2,21 @@
 All notable changes to engineering-os. Format: Keep a Changelog · Versioning: SemVer.
 
 ## [Unreleased]
+### Changed: output a non-engineer can follow
+- Teaching mode is **on** by default for new `eos init` / `eos adopt` / `eos start` (`--teach off` or `eos teach off`
+  opts out; existing projects keep their setting). With it on, `eos next` and `eos status` add a 3-6 word plain
+  meaning after jargon (mode, shape, gates, ratchet, ADR, PRD, SLO...), print the sentence to paste into Cline or
+  Cursor on its own line, and split `a && b` commands into one line each (Windows PowerShell 5.1 has no `&&`).
+- `eos adopt`, `eos init` and `eos start` end with four lines "In plain words": what was found (e.g. "A web app with a
+  Next.js frontend and a NestJS backend; 138 commits, ... few tests"), what eos set up, the documents to read, and
+  `eos next`. Technical lines gloss mode, shape, gates, ASVS level, scaffolds and MCP once. A ratchet check that
+  could not run says why and what to do (ESLint failing without findings: often built files like dist/ or .next/
+  are being linted, add them to the ignore list). A `.clinerules` file that blocks eos's Cline rules gets a fix line.
+- `--reconfigure` on `eos update` / `eos adopt` / `eos init`: ask the questionnaire again with the current answers as
+  defaults (or apply `--profile/--answers` without questions), recompute packs, and prune eos's unedited copies of
+  packs no longer selected (edited ones are kept and listed). A plain re-run says the answers were kept and how to
+  change them. `eos update` now accepts `--profile`, `--answers`, `--interactive`, `--yes` and `--teach`.
+
 ### Added: reproducible new-machine setup
 - `eos bootstrap` installs the Cline extension (`saoudrizwan.claude-dev`) into Cursor through Cursor's CLI when Cline is
   one of the tools (the default): `cursor` on PATH, else the default install folder per OS. Idempotent (skipped when

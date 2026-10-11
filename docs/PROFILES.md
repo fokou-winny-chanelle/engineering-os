@@ -23,7 +23,11 @@ eos init --profile mobile --answers money=yes,personal_data=yes,low_bandwidth=ye
 eos init --profile api --yes                 # non-interactive
 eos init --interactive                       # force the questions (e.g. inside a script with stdin)
 eos init --profile cli-library               # re-run any time to switch; saved answers are kept
+eos update --reconfigure                     # ask again on a set-up project (current answers are the defaults)
+eos update --reconfigure --profile api --answers scale=large   # same, without questions
 ```
+
+A plain re-run (`eos update`, `eos adopt`) keeps the saved answers and prints one line saying so. With `--reconfigure` the packs are recomputed from the new answers: new ones are added, eos's unedited copies of packs no longer selected are removed, and edited ones are kept and reported (`kept (edited; no longer selected)`).
 
 ## What a profile selects
 
@@ -60,7 +64,7 @@ eos init --profile cli-library               # re-run any time to switch; saved 
 Aliases: `refonte`, `replatform`, `migration` → rewrite; `adopt`, `legacy`, `existing` → brownfield; `maintenance`, `scale-up`, `mature` → maintain.
 
 Other per-project settings, all in `.eos/manifest.json`:
-- `teaching`: `off` by default since v0.6 (terse answers); `on` adds one always-on line (~30 tokens) asking agents to explain each decision in plain words. `eos teach on|off`.
+- `teaching`: `on` by default for new projects (it was `off` from v0.6 to v0.7.1). It adds one always-on line (~30 tokens) asking agents to explain each decision in plain words, and makes `eos next`/`eos status` gloss jargon and print the sentence to paste into the agent. `eos teach off` (or `--teach off`) opts out. Projects set up earlier keep their setting.
 - `lanes` (in `.eos/config.json`, optional): extra `risky` / `trivial` globs, `risk_words` and `large` thresholds for `eos lane` (docs/WORKFLOW.md).
 - `gates`: `strict` (default) or `ratchet` (default after `eos adopt`). Ratchet keeps stack formatters out of pre-commit (they would rewrite legacy code; the strict version waits in `.eos/suggested/pre-commit-strict.yaml`) and adds a pre-push `eos ratchet check`. `eos gates strict|ratchet`.
 

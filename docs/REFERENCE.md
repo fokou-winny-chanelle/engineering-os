@@ -32,7 +32,7 @@ The README covers the why and the quick start. This page lists everything else.
 | Command | Use |
 |---|---|
 | `eos bootstrap [--tools …] [--global-hooks] [--install-clis] [--dry-run]` | Machine setup. Safe to re-run. |
-| `eos init [DIR] [--profile web-app\|api\|mobile\|data-ml\|internal-tool\|cli-library\|full] [--answers k=v,…] [--yes\|--interactive] [--stacks auto\|none\|id:dir,…] [--tools …] [--bmad] [--dry-run]` | Add eos to a project. The questionnaire picks packs, gates and the security level ([docs/PROFILES.md](PROFILES.md)). Re-run to switch profile. |
+| `eos init [DIR] [--profile web-app\|api\|mobile\|data-ml\|internal-tool\|cli-library\|full] [--answers k=v,…] [--yes\|--interactive] [--stacks auto\|none\|id:dir,…] [--tools …] [--bmad] [--dry-run]` | Add eos to a project. The questionnaire picks packs, gates and the security level ([docs/PROFILES.md](PROFILES.md)). Re-run to switch profile. On a set-up project, `--reconfigure` asks again (current answers as defaults). |
 | `eos start [DIR] [--yes]` | First time? Asks what you are doing (new idea, existing code, rewrite, live product, several repos) and runs the right command, then shows the next step. |
 | `eos adopt [DIR] [--scan-only\|--report-only] [--no-baseline] [init options]` | Existing project: scan (languages, frameworks, commands, CI, lint configs, agent rules, tests, dependencies, git hot spots), write the project map, baseline report and improvement plan, install eos **without overwriting any file you had**, gates in ratchet mode. |
 | `eos next [DIR] [--brief] [--json] [--skip\|--unskip]` · `eos status [DIR]` | The one next step with its reason and command/prompt (blockers first; `--skip` drops a step you don't need, recorded). `status` shows the whole picture. |
@@ -44,7 +44,7 @@ The README covers the why and the quick start. This page lists everything else.
 | `eos mode [set <mode>]` · `eos topology [set <shape>]` · `eos teach on\|off` · `eos gates strict\|ratchet` | Show or change the lifecycle mode (greenfield, brownfield, rewrite/refonte, maintain), repo shape, teaching mode, and gate style. |
 | `eos ratchet [check\|init\|add <name> "<cmd>"\|update] [--tighten] [--strict]` | Baseline current lint/type/boundary violations and fail only on new ones; tighten as counts drop. |
 | `eos workspace init\|add\|status\|sync\|change "<title>"` | Multi-repo workspace: map of repos, contracts and owners for agents, editor workspace file, cross-repo change plans with merge order. |
-| `eos update [DIR]` | Refresh packs and templates from this repo into a project. |
+| `eos update [DIR] [--reconfigure] [--profile …] [--answers k=v,…] [--interactive]` | Refresh packs and templates from this repo into a project. A plain run keeps the saved answers (and says so); `--reconfigure` asks the questions again, or applies `--profile/--answers` without asking, then adds and prunes packs (eos-owned, unedited files only). |
 | `eos sync [DIR] [--check]` | Regenerate adapters from `.eos/packs`, or (with `--check`) report drift. |
 | `eos check` | Project gate: budgets, drift and frontmatter. Runs in CI, and in pre-commit only when agent-context files change. |
 | `eos test-integrity [--base origin/main] [--strict]` | Flags new skips, removed asserts, lowered thresholds and gate edits (these block). New suppression comments block only in risky lanes or with `--strict`; elsewhere they warn. Runs in CI. |

@@ -60,7 +60,7 @@ A **Service Level Objective** is a target for what users feel (e.g. "99.5% of ch
 Sources: https://sre.google/workbook/implementing-slos/ · https://sre.google/workbook/alerting-on-slos/
 
 ## teaching | teaching-mode
-With teaching mode on (`eos teach on`), agents explain each decision in one or two plain sentences (the principle and why it applies) and end a task with the next step. With it off (`eos teach off`), they stay terse. It costs about 45 always-on tokens.
+Teaching mode is on by default for new projects. Agents explain each decision in one or two plain sentences (the principle and why it applies) and end a task with the next step; `eos next` adds plain meanings after jargon and shows the exact sentence to paste into your agent. `eos teach off` makes everything terse (`eos teach on` brings it back). It costs about 45 always-on tokens.
 
 ## packs | tokens | context
 Agents read instructions on every request, and that costs tokens and attention. eos keeps the always-on part small (AGENTS.md core rules) and loads **packs** only when needed: by file path (e.g. migration docs) or as skills chosen by their one-line description. Budgets are checked by `eos check`; `eos budget` shows the numbers.

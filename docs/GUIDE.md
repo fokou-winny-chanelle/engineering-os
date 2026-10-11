@@ -82,19 +82,33 @@ Correct a wrong guess with `eos topology set <shape>`.
 
 The agent doesn't suggest a next step after every task any more (that cost a tool call and tokens each time). Ask "what next?" and it runs `eos next` for you.
 
-Example (`eos next` on an existing project, right after `eos adopt`; the last two lines appear with `eos teach on`):
+Example (`eos next` on an existing project, right after `eos adopt` and the first commit, with teaching mode on, the default):
 
 ```
-You are here: brownfield · phase Safety net (1/4 phases done)
+You are here: brownfield (existing code you're improving) · phase Safety net (1/4 phases done)
 Next: Pin current behaviour of the most-changed files
 Why: You can't change code safely without knowing what it does today; these tests catch accidental changes.
-How: ask your agent: "Read docs/eos/project-map.md (hot spots). Write characterization tests that pin what the top hot spot does today (migration pack). No behaviour changes."
-Guide: the agent uses the 'migration' pack for this step.
+How: paste this sentence into Cline or Cursor:
+  "Read docs/eos/project-map.md (hot spots). Write characterization tests that pin what the top hot spot does today (migration pack). No behaviour changes."
+Guide: your agent follows eos's 'migration' instructions (a pack) for this step.
 Learn the idea: `eos explain characterization-tests`
 ```
 
+The sentence in quotes is written for the agent, so it can use technical words. The lines around it are for you. When the step is a terminal command, `eos next` lists it one command per line, so you can type them one at a time.
+
+`eos adopt`, `eos init` and `eos start` end with four lines **"In plain words"**: what eos found, what it set up, the documents to read, and the next command. The detailed lines above them are for when you want to dig in.
+
 ## 7. Teaching mode
-Off by default (it makes every answer longer). `eos teach on` makes agents explain each decision in one or two plain sentences (which principle, and why it applies here) and define a term the first time they use it. `eos teach off` makes them terse again. It changes one line in `AGENTS.md`.
+On by default for new projects. Agents explain each decision in one or two plain sentences (which principle, and why it applies here) and define a term the first time they use it. `eos next` and `eos status` add a short plain meaning after jargon (for example "ratchet (old problems allowed, new ones blocked)") and show the exact sentence to paste into your AI chat. Once you know the ropes, `eos teach off` makes everything terse (and `eos teach on` brings it back). It changes one line in `AGENTS.md`. You can also pass `--teach off` to `eos start`, `eos init` or `eos adopt`.
+
+## Changing your answers later
+The first `eos init`, `eos adopt` or `eos start` asks a few questions: the type of project, whether it handles money or personal data, and so on. A later run keeps those answers and says so. To change them:
+
+- `eos update --reconfigure` asks the questions again, with your current answers as the defaults (press Enter to keep one).
+- `eos update --reconfigure --profile web-app --answers money=yes` changes them without questions.
+- `eos adopt --reconfigure` and `eos init --reconfigure` work too.
+
+eos then adds the guidance the new answers need and removes eos's own unedited copies of the guidance they no longer need. Files you edited are never deleted: they're kept and listed.
 
 ## 8. When something goes wrong
 | You see | What it means | What to do |

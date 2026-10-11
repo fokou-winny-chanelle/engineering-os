@@ -1538,6 +1538,95 @@ class RatchetTests(unittest.TestCase):
             self.assertEqual(run_eos("check", d)[0], 0)
 
 
+class PlainLanguageTests(unittest.TestCase):
+    """Output a non-engineer can follow: plain summary, glosses, reconfigure, ratchet skip hints."""
+
+    def test_adopt_ends_with_plain_summary_and_teaching_on(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "messy"
+            make_fixtures.make_messy(root)
+            rc, out = run_eos("adopt", str(root), "--yes", "--tools", "cursor,cline", "--no-baseline")
+            self.assertEqual(rc, 0, out)
+            tail = out.split("In plain words:", 1)[1]
+            self.assertIn("A web app with a React frontend and a Flask backend", tail)
+            self.assertIn("rules for Cursor and Cline", tail)
+            self.assertIn("won't fail you for old problems", tail)
+            for rel in ("docs/eos/project-map.md", "docs/eos/baseline-report.md", "docs/plans/improvement-plan.md"):
+                self.assertIn(rel, tail)
+            self.assertIn("`eos next`", tail)
+            self.assertIn("brownfield (existing code you're improving", out)  # jargon glossed once
+            self.assertIn("ratchet (old problems allowed, new ones blocked)", out)
+            self.assertNotIn("next: fill 'Project specifics'", out)  # adopt prints one ending, not two
+            self.assertEqual(eos.load_manifest(root)["teaching"], "on")
+            # teach off still opts out, and survives a later update
+            run_eos("teach", "off", "--dir", str(root))
+            run_eos("update", str(root))
+            self.assertEqual(eos.load_manifest(root)["teaching"], "off")
+
+    def test_rerun_says_answers_were_kept_and_reconfigure_changes_them(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            make_rewrite(root)
+            run_eos("init", d, "--yes", "--tools", "cursor", "--profile", "api", "--answers", "scale=large")
+            m = eos.load_manifest(root)
+            self.assertIn("performance-scale", m["phases"])
+            rc, out = run_eos("update", d)
+            self.assertIn("kept your earlier answers (project type: api)", out)
+            self.assertIn("`eos update --reconfigure`", out)
+            # an edited pack the new answers no longer need is kept and reported; an unedited one is removed
+            ops = root / ".eos/packs/phases/operations.md"
+            perf = root / ".eos/packs/phases/performance-scale.md"
+            self.assertTrue(ops.exists() and perf.exists())
+            ops.write_text(ops.read_text(encoding="utf-8") + "\nmy note\n", encoding="utf-8", newline="\n")
+            rc, out = run_eos("update", d, "--reconfigure", "--profile", "cli-library", "--answers", "scale=small")
+            self.assertEqual(rc, 0, out)
+            m = eos.load_manifest(root)
+            self.assertEqual((m["profile"], m["answers"]["scale"]), ("cli-library", "small"))
+            self.assertNotIn("performance-scale", m["phases"])
+            self.assertFalse(perf.exists())
+            self.assertTrue(ops.exists())
+            self.assertIn("my note", ops.read_text(encoding="utf-8"))
+            self.assertIn("no longer needed", out)
+            self.assertIn("kept (edited; no longer selected)", out)
+            self.assertNotIn("kept your earlier answers", out)
+            # interactive: current values are the defaults (Enter keeps them), one answer changed
+            answers = iter(["", "yes", "", "", "", ""])
+            real = eos.ask_questions
+            with mock.patch.object(eos, "ask_questions", lambda *a: real(*a, ask=lambda _p="": next(answers))):
+                rc, out = run_eos("adopt", d, "--reconfigure", "--interactive", "--no-baseline")
+            self.assertEqual(rc, 0, out)
+            m = eos.load_manifest(root)
+            self.assertEqual((m["profile"], m["answers"]["money"]), ("cli-library", "yes"))
+
+    def test_describe_project_in_plain_words(self):
+        facts = {"code_files": 240, "test_files": 6, "commits": 138, "git": True, "by_ext": {".ts": 240}}
+        s = eos.describe_project(facts, {"Next.js", "React", "NestJS", "Jest"}, "monorepo")
+        self.assertTrue(s.startswith("A web app with a Next.js frontend and a NestJS backend"), s)
+        self.assertIn("several apps in one repo", s)
+        self.assertIn("138 commits", s)
+        self.assertIn("few tests", s)
+        self.assertIn("no code yet", eos.describe_project({"code_files": 0}, set()))
+        self.assertIn("written in Python", eos.describe_project({"code_files": 3, "by_ext": {".py": 3}}, set()))
+
+    def test_gloss_explains_jargon_once(self):
+        seen: set[str] = set()
+        out = eos.gloss("Write characterization tests; more characterization tests later. Open a PR.", seen)
+        self.assertEqual(out.count("(tests that record today's behaviour)"), 1)
+        self.assertIn("PR (a reviewed change request)", out)
+        self.assertEqual(eos.gloss("Write the PRD", set()), "Write the PRD (the written requirements)")
+
+    def test_ratchet_skip_hints_are_plain(self):
+        hint = eos.ratchet_skip_hint(
+            "skipped (command failed (exit 2) without findings: Oops)", {"cmd": "npx eslint . -f unix"}
+        )
+        self.assertIn("dist/", hint)
+        self.assertIn("ignore list", hint)
+        self.assertIn(
+            "npm install", eos.ratchet_skip_hint("skipped (node_modules missing: run your package install first)", {})
+        )
+        self.assertEqual(eos.ratchet_skip_hint("baseline 3 existing violation(s)", {}), "")
+
+
 class NavigatorTests(unittest.TestCase):
     def test_lifecycle_definition_is_consistent(self):
         lc = json.loads((REPO / "core/lifecycle.json").read_text(encoding="utf-8"))
@@ -1577,9 +1666,13 @@ class NavigatorTests(unittest.TestCase):
             self.assertEqual(json.loads(out)["phase"], "discover")
             self.assertEqual(run_eos("status", d, "--strict")[0], 1)
             rc, out = run_eos("next", d)
-            self.assertNotIn("eos explain", out)  # v0.6: teaching mode is off by default
-            run_eos("teach", "on", "--dir", d)
-            self.assertIn("eos explain", run_eos("next", d)[1])
+            self.assertIn("eos explain", out)  # teaching mode is on by default for new projects
+            self.assertIn("paste this sentence into", out)  # the exact sentence for the agent, on its own line
+            self.assertEqual(eos.load_manifest(root)["teaching"], "on")
+            run_eos("teach", "off", "--dir", d)
+            out = run_eos("next", d)[1]
+            self.assertNotIn("eos explain", out)
+            self.assertIn('How: ask your agent: "', out)  # terse form when teaching is off
 
     def test_blockers_come_first(self):
         with tempfile.TemporaryDirectory() as d:

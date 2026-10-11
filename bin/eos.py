@@ -1088,6 +1088,166 @@ MODE_LINES = {
 TEACH_LINE = "- Teaching mode: explain each decision in 1-2 plain sentences (the principle and why it applies); define jargon once."
 
 
+# Plain glosses (3-6 words) for terms eos prints to people. Shown once, in parentheses, next to the term.
+MODE_PLAIN = {
+    "greenfield": "a brand-new project",
+    "brownfield": "existing code you're improving",
+    "rewrite": "replacing an old system step by step",
+    "maintain": "a live product you keep running",
+}
+TOPOLOGY_PLAIN = {
+    "single": "one app in one repo",
+    "monorepo": "several apps in one repo",
+    "modular-monolith": "one app split into modules",
+    "microservices": "many small separate services",
+}
+GATES_PLAIN = {
+    "strict": "every problem blocks a commit",
+    "ratchet": "old problems allowed, new ones blocked",
+}
+PLAIN_TERMS = {  # for `eos next` / `eos status` with teaching on (first occurrence only)
+    "characterization tests": "tests that record today's behaviour",
+    "golden-master": "saved output to compare against",
+    "hot spots": "the most-changed files",
+    "linters": "tools that flag code problems",
+    "ratchet": "old problems allowed, new ones blocked",
+    "ADR": "a short written decision record",
+    "PRD": "the written requirements",
+    "SLO": "a reliability target users feel",
+    "runbook": "step-by-step fix instructions",
+    "P0/P1": "most urgent items",
+    "seam": "the switch between old and new",
+    "parity": "behaves exactly like before",
+    "cutover": "switching users to the new system",
+    "acceptance criteria": "how we know it's done",
+    "PR": "a reviewed change request",
+}
+
+
+def gloss(text: str, seen: set[str]) -> str:
+    """Add a plain gloss after the first use of each jargon term (case-sensitive for acronyms)."""
+    for term, plain in PLAIN_TERMS.items():
+        if term in seen:
+            continue
+        flags = 0 if term.isupper() or "/" in term else re.IGNORECASE
+        m = re.search(rf"(?<![\w`/.-]){re.escape(term)}s?(?![\w`/-])", text, flags)
+        if m:
+            text = f"{text[: m.end()]} ({plain}){text[m.end() :]}"
+            seen.add(term)
+    return text
+
+
+def _answers_kept_line(profile: str | None, how: str) -> str:
+    return (
+        f"answers: kept your earlier answers (project type: {profile or 'not set'}). To change them: "
+        f"`eos {how} --reconfigure` (asks the questions again), or without questions, e.g. "
+        f"`eos {how} --reconfigure --profile web-app --answers money=yes`."
+    )
+
+
+TOOL_NAMES = {"cursor": "Cursor", "cline": "Cline", "claude": "Claude Code", "codex": "Codex"}
+FRONTEND_FW = ("Next.js", "Nuxt", "Angular", "Svelte", "Vue", "React")
+BACKEND_FW = ("NestJS", "Express", "Fastify", "Django", "FastAPI", "Flask")
+MOBILE_FW = ("Expo", "React Native")
+LANG_NAMES = {
+    ".py": "Python",
+    ".ts": "TypeScript",
+    ".tsx": "TypeScript",
+    ".js": "JavaScript",
+    ".jsx": "JavaScript",
+    ".go": "Go",
+    ".java": "Java",
+    ".kt": "Kotlin",
+    ".rb": "Ruby",
+    ".php": "PHP",
+    ".cs": "C#",
+    ".rs": "Rust",
+    ".ex": "Elixir",
+    ".dart": "Dart",
+}
+
+
+def _join_words(xs: list[str]) -> str:
+    return xs[0] if len(xs) == 1 else ", ".join(xs[:-1]) + " and " + xs[-1]
+
+
+def describe_project(facts: dict, frameworks, topology: str | None = None) -> str:
+    """One plain sentence: what kind of project this is, its history and how well it's tested."""
+    fw = set(frameworks or [])
+    front = [f for f in FRONTEND_FW if f in fw]
+    back = [f for f in BACKEND_FW if f in fw]
+    mobile = [f for f in MOBILE_FW if f in fw]
+    if "Next.js" in front or "Nuxt" in front:  # Next.js is built on React, Nuxt on Vue: name the framework only
+        front = [f for f in front if f not in ("React", "Vue")]
+    if facts.get("code_files", 0) == 0:
+        return "A new project (no code yet)"
+    if mobile:
+        what = f"A mobile app built with {mobile[0]}" + (f" and a {back[0]} backend" if back else "")
+    elif front and back:
+        what = f"A web app with a {_join_words(front[:2])} frontend and a {_join_words(back[:2])} backend"
+    elif front:
+        what = f"A web app built with {_join_words(front[:2])}"
+    elif back:
+        what = f"A backend (server) built with {_join_words(back[:2])}"
+    else:
+        langs = []
+        for ext in facts.get("by_ext", {}):
+            name = LANG_NAMES.get(ext)
+            if name and name not in langs:
+                langs.append(name)
+        what = f"A project written in {_join_words(langs[:3])}" if langs else "A project"
+    if topology == "monorepo":
+        what += ", several apps in one repo"
+    code, tests = facts.get("code_files", 0), facts.get("test_files", 0)
+    ratio = tests / code if code else 0
+    tested = (
+        "no tests yet"
+        if tests == 0
+        else "few tests"
+        if ratio < 0.1
+        else "some tests"
+        if ratio < 0.3
+        else "a good number of tests"
+    )
+    hist = f"{facts['commits']} commits" if facts.get("git") else "not in git yet"
+    return f"{what}; {hist}, {code} code files, {tested} ({tests} test file{'' if tests == 1 else 's'})."
+
+
+def project_frameworks(root: Path, base=()) -> set[str]:
+    """Frameworks named in every package.json / pyproject.toml / requirements.txt up to 3 folders deep, so a
+    monorepo's apps (apps/web: Next.js, apps/api: NestJS) are described even when the stack is detected at the root."""
+    fws = set(base or ())
+    dirs = {
+        rel.parent for rel in iter_files(root, 4) if rel.name in ("package.json", "pyproject.toml", "requirements.txt")
+    }
+    for d in sorted(dirs)[:200]:
+        fws |= {FRAMEWORK_DEPS[k] for k in _deps(root / d) if k in FRAMEWORK_DEPS}
+    return fws
+
+
+def plain_summary(
+    found: str, tools: list[str], hooks: bool, ci: bool, ratchet: bool, docs: list[tuple[str, str]]
+) -> str:
+    """The 4-line, jargon-free ending of init/adopt/start, for someone who isn't an engineer."""
+    names = [TOOL_NAMES.get(t, t) for t in tools]
+    setup = [f"rules for {_join_words(names)}" if names else "rules for your AI tools"]
+    if hooks:
+        setup.append("checks that run each time you commit")
+    if ci:
+        setup.append("the same checks on GitHub")
+    if ratchet:
+        setup.append("a starting point that won't fail you for old problems, only new ones")
+    lines = [
+        "In plain words:",
+        f"  Found : {found}",
+        f"  Set up: {_join_words(setup)}.",
+        "  Read  : " + "; ".join(f"{p} ({why})" for p, why in docs) + ".",
+        "  Next  : run `eos next` here. It names the one next step, says why, and gives the exact sentence to "
+        "paste into " + ("Cline or Cursor" if "cline" in tools else "your AI chat") + ".",
+    ]
+    return "\n".join(lines)
+
+
 def norm_mode(m: str | None) -> str | None:
     if not m:
         return None
@@ -1718,14 +1878,43 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
     unsupported: list[str] = []
     adopt = bool(getattr(args, "adopt", False) or manifest.get("adopted"))  # adopted once = never clobber
     evidence: list[str] = []
+    # --reconfigure (or --profile/--answers on a set-up project): ask again, current answers as defaults
+    reconf = bool(manifest) and bool(
+        getattr(args, "reconfigure", False) or getattr(args, "profile", None) or getattr(args, "answers", None)
+    )
+    answers_note = ""  # one plain line when a re-run silently keeps the earlier answers
+    prev_phases = list(manifest.get("phases", []))
     if update:
         cfg = {k: manifest[k] for k in CFG_KEYS if k in manifest}
         if cfg.get("topology"):  # the confirmed shape stays; its details (new services, modules) refresh
             cfg["topology_details"] = detect_topology(root, cfg.get("stacks", {}))[2]
         prof = cfg.get("profile") or "full"  # projects from v0.3 and earlier had every pack
-        want = select_phases(spec, prof, cfg.get("answers", {}), phases, cfg.get("mode"), cfg.get("topology"))
-        keep = set(cfg.get("phases", [])) | set(want)
-        cfg["phases"] = [pid for pid in phases if pid in keep]  # new packs arrive only if the profile wants them
+        if getattr(args, "teach", None):
+            cfg["teaching"] = args.teach
+        if reconf:
+            answers = dict(cfg.get("answers", {}))
+            answers.update(parse_answers(getattr(args, "answers", None)))
+            prof = getattr(args, "profile", None) or prof
+            tty = sys.stdin.isatty() and sys.stdout.isatty()
+            if getattr(args, "interactive", False) or (
+                tty and not getattr(args, "yes", False) and not args.dry_run and not getattr(args, "profile", None)
+            ):
+                prof, answers = ask_questions(spec, prof, answers)
+            elif not getattr(args, "profile", None) and not getattr(args, "answers", None):
+                answers_note = (
+                    "answers: no terminal to ask on, so nothing changed. Use `--interactive`, or give "
+                    "`--profile <type> --answers key=value,...`."
+                )
+            cfg["profile"], cfg["answers"] = prof, complete_answers(answers)
+            # exactly what the new answers select: packs no longer wanted are pruned below (eos-owned and
+            # unedited only; edited ones are kept and reported)
+            cfg["phases"] = select_phases(spec, prof, cfg["answers"], phases, cfg.get("mode"), cfg.get("topology"))
+        else:
+            want = select_phases(spec, prof, cfg.get("answers", {}), phases, cfg.get("mode"), cfg.get("topology"))
+            keep = set(cfg.get("phases", [])) | set(want)
+            cfg["phases"] = [pid for pid in phases if pid in keep]  # new packs arrive only if the profile wants them
+            if getattr(args, "cmd", None) in ("update", "adopt"):
+                answers_note = _answers_kept_line(cfg.get("profile"), args.cmd)
     else:
         tools = parse_tools(args.tools or ",".join(load_global_state().get("tools", DEFAULT_TOOLS)))
         stack_dirs, unsupported = resolve_stacks(args, root, stacks)
@@ -1745,6 +1934,8 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
         tty = sys.stdin.isatty() and sys.stdout.isatty()
         if args.interactive or (tty and not args.yes and not args.dry_run and not args.profile):
             profile, answers = ask_questions(spec, profile, answers)
+        elif manifest and not reconf and getattr(args, "cmd", None) == "init":
+            answers_note = _answers_kept_line(profile, "init")
         cfg["profile"] = profile
         cfg["answers"] = complete_answers(answers)
         topo, tev, det = detect_topology(root, stack_dirs)
@@ -1752,7 +1943,7 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
         cfg["topology_details"] = det
         mode, mev = detect_mode(root)
         cfg["mode"] = norm_mode(getattr(args, "mode", None)) or manifest.get("mode") or mode
-        cfg["teaching"] = getattr(args, "teach", None) or manifest.get("teaching") or "off"
+        cfg["teaching"] = getattr(args, "teach", None) or manifest.get("teaching") or "on"  # `eos teach off`
         cfg["gates"] = manifest.get("gates") or ("ratchet" if adopt else "strict")
         if manifest.get("workspace"):
             cfg["workspace"] = manifest["workspace"]
@@ -1877,18 +2068,38 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
     if cfg.get("profile"):
         a = cfg.get("answers", {})
         known = ", ".join(f"{k}={v}" for k, v in a.items() if v != "unknown") or "none (unknown = cautious defaults)"
-        print(f"  profile: {cfg['profile']}  answers: {known}  -> ASVS L{security_level(a)}")
+        print(
+            f"  profile: {cfg['profile']}  answers: {known}  -> security level ASVS L{security_level(a)} "
+            "(OWASP checklist: L1 basic, L2 most apps, L3 critical)"
+        )
         sc = spec["profiles"].get(cfg["profile"], {}).get("scaffolds", [])
         todo = [s for s in sc if s not in manifest.get("scaffolded", [])]
-        if todo and not update:
-            print(f"  suggested scaffolds: {', '.join(todo)}  (eos scaffold <name>)")
+        if todo and (not update or reconf):
+            print(f"  suggested scaffolds (ready-made starter files): {', '.join(todo)}  (eos scaffold <name>)")
         mp = spec["profiles"].get(cfg["profile"], {}).get("mcp_profile")
-        if mp and not update:
-            print(f"  suggested MCP profile: eos mcp use {mp}  (machine-wide; switch per phase any time)")
-    if cfg.get("mode") or cfg.get("topology"):
+        if mp and (not update or reconf):
+            print(
+                f"  suggested MCP profile (connectors your AI tools use): eos mcp use {mp}"
+                "  (machine-wide; switch per phase any time)"
+            )
+    if reconf:
+        before = set(prev_phases)
+        added = [p for p in cfg["phases"] if p not in before]
+        dropped = [p for p in phases if p in before and p not in cfg["phases"]]
         print(
-            f"  mode  : {cfg.get('mode') or '-'}   topology: {cfg.get('topology') or '-'}   teaching: "
-            f"{cfg.get('teaching') or 'off'}   gates: {cfg.get('gates') or 'strict'}"
+            f"  packs : {len(added)} added{' (' + ', '.join(added) + ')' if added else ''}, {len(dropped)} no longer"
+            f" needed{' (' + ', '.join(dropped) + ')' if dropped else ''}: eos's own unedited copies are removed,"
+            " files you edited are kept and listed below"
+        )
+    if cfg.get("mode") or cfg.get("topology"):
+        mo, to, ga = cfg.get("mode") or "-", cfg.get("topology") or "-", cfg.get("gates") or "strict"
+        print(
+            f"  mode  : {mo}{' (' + MODE_PLAIN[mo] + ')' if mo in MODE_PLAIN else ''}   "
+            f"shape: {to}{' (' + TOPOLOGY_PLAIN[to] + ')' if to in TOPOLOGY_PLAIN else ''}"
+        )
+        print(
+            f"          teaching: {cfg.get('teaching') or 'off'} (agents explain their choices)   "
+            f"gates: {ga}{' (' + GATES_PLAIN[ga] + ')' if ga in GATES_PLAIN else ''}"
         )
         for e in evidence:
             print(f"          why: {e}")
@@ -1921,10 +2132,18 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
         if status.startswith("SKIPPED") and not args.verbose:
             skipped.setdefault(status, []).append(rel)
             continue
-        if status not in ("unchanged", "kept") and (args.verbose or status.startswith(("CONFLICT", "kept yours"))):
+        if status not in ("unchanged", "kept") and (
+            args.verbose or status.startswith(("CONFLICT", "kept yours", "kept (edited"))
+        ):
             print(f"  {status:<14} {rel}")
     for status, rels in skipped.items():
         print(f"  {status}: {len(rels)} file(s), e.g. {rels[0]}  (-v lists all)")
+        blk = re.match(r"SKIPPED \((.+) is a file, not a folder\)", status)
+        if blk:
+            print(
+                f"          -> {blk.group(1)} is a single file, but eos needs a folder with that name for these rules."
+                f" Move it to {blk.group(1)}/project.md (the tool reads both), then run `eos update`."
+            )
     print("  summary: " + ", ".join(f"{v} {k}" for k, v in sorted(counts.items())))
     conflicts = any(s.startswith("CONFLICT") for s, _ in w.report)
     if conflicts:
@@ -1935,7 +2154,11 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
     if not args.no_precommit and not args.dry_run and (root / ".git").exists():
         if shutil.which("pre-commit"):
             code, _ = run(["pre-commit", "install"], cwd=root, timeout=120)
-            hooks_note = "pre-commit hooks installed" if code == 0 else "`pre-commit install` failed: run it by hand"
+            hooks_note = (
+                "pre-commit hooks installed (checks that run when you commit)"
+                if code == 0
+                else "`pre-commit install` failed: run it by hand"
+            )
             if code == 0 and sys.stdout.isatty() and not os.environ.get("EOS_NO_WARM"):
                 # download hook tools now, in the background, while the network is up: the first commit then
                 # doesn't stall (or fail) on a flaky connection. Log: .eos/state/hook-warm.log
@@ -1956,8 +2179,29 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
             hooks_note = "install pre-commit (`uv tool install pre-commit`), then `pre-commit install`"
     if hooks_note:
         print(f"  hooks : {hooks_note}")
-    if not update:
+    if answers_note:
+        print("  " + answers_note)
+    if not update and not getattr(args, "_from_adopt", False):
         print("  next: fill 'Project specifics' in AGENTS.md, commit `chore: add engineering-os`, then `eos doctor`.")
+        if not args.dry_run:
+            facts = repo_facts(root)
+            fws = project_frameworks(root)
+            print()
+            print(
+                plain_summary(
+                    describe_project(facts, fws, cfg.get("topology")),
+                    cfg["tools"],
+                    hooks=not args.no_precommit,
+                    ci=not args.no_ci,
+                    ratchet=cfg.get("gates") == "ratchet",
+                    docs=[
+                        (
+                            "AGENTS.md",
+                            "the rules your AI tools follow; add your project's details under 'Project specifics'",
+                        )
+                    ],
+                )
+            )
     return 1 if conflicts and args.strict else 0
 
 
@@ -4034,8 +4278,12 @@ def cmd_adopt(args: argparse.Namespace) -> int:
         f"  found : {', '.join(f'{k} {v}' for k, v in list(scan['facts']['by_ext'].items())[:5]) or 'no source files'}"
     )
     print(f"  stacks: {', '.join(k + '@' + '+'.join(as_dirs(v)) for k, v in sd.items()) or '(none with a pack)'}")
-    print(f"  mode  : {preview['mode']}  ({'; '.join(mev)})")
-    print(f"  shape : {preview['topology']}" + (f"  ({'; '.join(tev)})" if tev else ""))
+    pm_, pt_ = preview["mode"], preview["topology"]
+    print(f"  mode  : {pm_} ({MODE_PLAIN.get(pm_, '-')}; {'; '.join(mev)})")
+    print(
+        f"  shape : {pt_} ({TOPOLOGY_PLAIN.get(pt_, 'how the code is laid out')}"
+        + (f"; {'; '.join(tev)})" if tev else ")")
+    )
     rules = [r["path"] for r in scan["agent_rules"] if not r["eos"]]
     print(f"  agent rules already here: {', '.join(rules) or 'none'} (kept; eos only adds marked blocks)")
     print(f"  lint/format configs kept as they are: {', '.join(scan['lint_configs']) or 'none'}")
@@ -4049,7 +4297,7 @@ def cmd_adopt(args: argparse.Namespace) -> int:
     rc = 0
     if not args.report_only:
         ns = argparse.Namespace(**vars(args))
-        ns.adopt, ns.mode = True, preview["mode"]
+        ns.adopt, ns.mode, ns._from_adopt = True, preview["mode"], True
         ns.stacks = getattr(args, "stacks", "auto") or "auto"
         ns.no_ci = args.no_ci or bool(scan["facts"]["ci"])  # their CI stays theirs; eos-core is added below
         rc = cmd_init(ns, update=bool(m))
@@ -4059,15 +4307,28 @@ def cmd_adopt(args: argparse.Namespace) -> int:
             w.managed(".github/workflows/eos-core.yml", read(home / "core/ci/eos-core.yml"))
             save_manifest(root, m)
     ratchet_rep: list[tuple[str, str]] = []
-    if not args.dry_run and not args.report_only and not args.no_baseline:
+    reconf = getattr(args, "reconfigure", False)  # new answers don't change what your code does today
+    if not args.dry_run and not args.report_only and not args.no_baseline and not reconf:
         cfg = load_ratchet(root)
         if not cfg.get("checks"):
             cfg["checks"] = suggest_ratchet_checks(root, m.get("stacks", sd))
             write(root / RATCHET_FILE, json.dumps(cfg, indent=2) + "\n")
-        print(f"  ratchet: baselining {len(cfg['checks'])} check(s) (runs your linters once; may take a minute)")
+        if cfg["checks"]:
+            print(
+                f"  ratchet (old problems allowed, new ones blocked): recording today's results of"
+                f" {len(cfg['checks'])} check(s) (runs your linters once; may take a minute)"
+            )
+        else:
+            print(
+                "  ratchet (old problems allowed, new ones blocked): no lint or type-check tool found to record yet;"
+                " `eos next` will guide you"
+            )
         ratchet_rep = ratchet_baseline(root, cfg["checks"])
         for n, msg in ratchet_rep:
             print(f"    {n:<18} {msg}")
+            hint = ratchet_skip_hint(msg, next((c for c in cfg["checks"] if c["name"] == n), {}))
+            if hint:
+                print(f"    {'':<18} -> {hint}")
     if not args.dry_run:
         cfg = {**preview, **{k: m.get(k) for k in ("mode", "topology", "tools") if m.get(k)}}
         write(root / "docs/eos/project-map.md", render_project_map(scan, cfg))
@@ -4088,7 +4349,45 @@ def cmd_adopt(args: argparse.Namespace) -> int:
     print(
         "  next  : `eos next` (it reads the plan). Review the diff before committing: nothing of yours was overwritten."
     )
+    if not args.dry_run and not args.report_only:
+        mm = load_manifest(root)
+        print()
+        print(
+            plain_summary(
+                describe_project(scan["facts"], project_frameworks(root, scan["frameworks"]), preview["topology"]),
+                mm.get("tools") or [],
+                hooks=not args.no_precommit,
+                ci=not args.no_ci,
+                ratchet=mm.get("gates") == "ratchet",
+                docs=[
+                    ("docs/eos/project-map.md", "what is where"),
+                    ("docs/eos/baseline-report.md", "the health of the code today"),
+                    ("docs/plans/improvement-plan.md", "what to fix first"),
+                ],
+            )
+        )
     return rc
+
+
+def ratchet_skip_hint(msg: str, chk: dict) -> str:
+    """Plain words for a ratchet check that could not run: why, and what to do about it."""
+    if "node_modules missing" in msg:
+        return f"install the project's packages first (e.g. `npm install` in {chk.get('cwd', '.')}), then `eos ratchet update`"
+    if "not installed" in msg or "command not found" in msg:
+        return "that tool isn't installed on this computer; install it, then `eos ratchet update`"
+    if "timeout" in msg:
+        return "it took too long; try again with `eos ratchet update`, or remove the check from .eos/ratchet.json"
+    if "without findings" in msg:
+        cmd = chk.get("cmd", "")
+        why = "the tool stopped with an error instead of listing problems"
+        if "eslint" in cmd or "eslint" in msg.lower():
+            return (
+                f"{why}. Often ESLint is scanning built files (dist/, .next/, build/) or its config fails to load:"
+                " add those folders to ESLint's ignore list, run the command once yourself to see the error, then"
+                " `eos ratchet update`"
+            )
+        return f"{why}. Run `{cmd}` yourself to see the error, fix it, then `eos ratchet update`"
+    return ""
 
 
 # ----------------------------------------------------------------------------- navigator (status / next / explain)
@@ -4395,6 +4694,7 @@ def nav_status(root: Path, m: dict) -> dict:
         "topology": m.get("topology"),
         "gates_mode": m.get("gates") or "strict",
         "teaching": m.get("teaching") or "off",
+        "tools": list(m.get("tools") or []),
         "phase": current,
         "phase_title": cur.get("title") if current else "complete",
         "phase_goal": cur.get("goal", ""),
@@ -4436,24 +4736,47 @@ def render_next(st: dict, brief: bool = False) -> str:
         why = re.split(r"[.;:]", n.get("why") or "")[0].strip()
         why = (why[:1].lower() + why[1:]) if why else ""
         return f"Next: {n['say']}" + (f" — {why}" if why else "") + f" → {act or 'see eos status'}"
+    teach = st["teaching"] == "on"
+    seen: set[str] = set()
+
+    def g(t: str) -> str:  # teaching: a plain gloss after the first use of each jargon term
+        return gloss(t, seen) if teach else t
+
+    mode = st["mode"]
     lines = [
-        f"You are here: {st['mode']} · phase {st['phase_title']}"
+        g(
+            f"You are here: {mode}{' (' + MODE_PLAIN[mode] + ')' if teach and mode in MODE_PLAIN else ''}"
+            f" · phase {st['phase_title']}"
+        )
         + (
             f" ({sum(p['state'] == 'done' for p in st['phases'])}/{len(st['phases'])} phases done)"
             if st["phases"]
             else ""
         ),
-        f"Next: {n['say']}",
+        f"Next: {g(n['say'])}",
     ]
     if n.get("why"):
-        lines.append(f"Why: {n['why']}")
-    if act:
+        lines.append(f"Why: {g(n['why'])}")
+    tools = st.get("tools") or []
+    chat = "Cline or Cursor" if "cline" in tools else "your AI chat (Cursor, Claude Code...)"
+    if teach and n.get("prompt"):
+        lines += [f"How: paste this sentence into {chat}:", f'  "{n["prompt"]}"']
+    elif teach and n.get("cmd"):
+        parts = [x.strip() for x in n["cmd"].split("&&")]
+        lines.append(
+            "How: type this in the terminal and press Enter:"
+            if len(parts) == 1
+            else "How: type these in the terminal, one at a time (Enter after each):"
+        )
+        lines += [f"  {x}" for x in parts]
+        lines.append(f"  (or ask {chat} to run it for you)")
+    elif act:
         lines.append(f"How: {act}")
     if n.get("bmad"):
         lines.append(f"  or with BMAD: run the `{n['bmad']}` skill (`bmad-help` shows BMAD's own next step)")
-    if st["teaching"] == "on":
+    if teach:
         if n.get("pack"):
-            lines.append(f"Guide: the agent uses the '{n['pack']}' pack for this step.")
+            lines.append(f"Guide: your agent follows eos's '{n['pack']}' instructions (a pack) for this step.")
         if n.get("explain"):
             lines.append(f"Learn the idea: `eos explain {n['explain']}`")
     for nt in st.get("notes", []):
@@ -4467,7 +4790,13 @@ def render_next(st: dict, brief: bool = False) -> str:
 def render_status(st: dict) -> str:
     sym = {"done": "✓", "current": "▶", "todo": "·", "skipped": "–"}
     lines = [
-        f"Mode: {st['mode']}   shape: {st['topology'] or '-'}   gates: {st['gates_mode']}   teaching: {st['teaching']}",
+        (
+            f"Mode: {st['mode']}   shape: {st['topology'] or '-'}   gates: {st['gates_mode']}   teaching: {st['teaching']}"
+            if st["teaching"] != "on"
+            else f"Mode: {st['mode']} ({MODE_PLAIN.get(st['mode'], '-')})   shape: {st['topology'] or '-'}"
+            f" ({TOPOLOGY_PLAIN.get(st['topology'] or '', 'how the code is laid out')})   gates: {st['gates_mode']}"
+            f" ({GATES_PLAIN.get(st['gates_mode'], '-')})   teaching: on"
+        ),
         (
             f"Git: {st['git']['branch'] or '-'} ({st['git']['dirty']} uncommitted)   stories: {st['stories']['open']} open / "
             f"{st['stories']['done']} done   improvement plan: {st['plan']['open']} open / {st['plan']['done']} done"
@@ -4964,7 +5293,10 @@ def cmd_start(args: argparse.Namespace, ask=input) -> int:
     root = Path(args.dir).resolve()
     root.mkdir(parents=True, exist_ok=True)
     if load_manifest(root):
-        print("eos is already set up here. Where you are and what to do next:\n")
+        print(
+            "eos is already set up here. To change the project questions (type, money, personal data...):"
+            " `eos update --reconfigure`.\nWhere you are and what to do next:\n"
+        )
         return cmd_next(argparse.Namespace(dir=str(root), json=False, brief=False))
     if looks_like_workspace(root) or (root / WS_FILE).exists():
         guess, why = "workspace", f"this folder holds several git repos ({', '.join(find_child_repos(root)[:4])})"
@@ -4984,7 +5316,7 @@ def cmd_start(args: argparse.Namespace, ask=input) -> int:
     tools = args.tools or (
         _ask(ask, "Your AI tools (cursor, cline, claude, codex)", tools_default) if interactive else tools_default
     )
-    teach = args.teach or "off"  # a default, not a question: `eos teach on` any time
+    teach = args.teach or "on"  # a default, not a question: `eos teach off` any time
     print()
     explain_topic = {
         "greenfield": "phases",
@@ -13372,6 +13704,24 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--no-precommit", action="store_true")
         p.add_argument("--bmad", action="store_true", help="also install BMAD (version pinned in versions.toml)")
         p.add_argument("--strict", action="store_true", help="exit 1 when a conflict (.eos-new) was written")
+        p.add_argument(
+            "--profile",
+            choices=["web-app", "api", "mobile", "data-ml", "internal-tool", "cli-library", "full"],
+            help="project type: selects packs and gates (default: guessed from stacks; asked on a terminal)",
+        )
+        p.add_argument(
+            "--answers",
+            help="questionnaire answers, e.g. money=yes,personal_data=yes,llm=no,scale=medium,low_bandwidth=yes",
+        )
+        p.add_argument(
+            "--reconfigure",
+            action="store_true",
+            help="set-up project: ask the questions again (current answers as defaults; with --profile/--answers:"
+            " no questions), then refresh packs and files without touching yours",
+        )
+        p.add_argument("--interactive", action="store_true", help="ask the questionnaire even without a terminal")
+        p.add_argument("-y", "--yes", action="store_true", help="never ask; use flags, saved answers and guesses")
+        p.add_argument("--teach", choices=["on", "off"], help="teaching mode: agents explain decisions (default on)")
         if name in ("init", "adopt"):
             p.add_argument("--tools", help="default: tools chosen at bootstrap, else cursor,cline")
             p.add_argument("--stacks", default="auto", help="auto | none | id[:dir],id[:dir]")
@@ -13379,23 +13729,9 @@ def build_parser() -> argparse.ArgumentParser:
             p.add_argument("--pm", choices=sorted(PM_INFO), help="node package manager (default: detected)")
             p.add_argument("--python", help="interpreter the hooks call (default python3; python on Windows)")
             p.add_argument(
-                "--profile",
-                choices=["web-app", "api", "mobile", "data-ml", "internal-tool", "cli-library", "full"],
-                help="project type: selects packs and gates (default: guessed from stacks; asked on a terminal)",
-            )
-            p.add_argument(
-                "--answers",
-                help="questionnaire answers, e.g. money=yes,personal_data=yes,llm=no,scale=medium,low_bandwidth=yes",
-            )
-            p.add_argument("--interactive", action="store_true", help="ask the questionnaire even without a terminal")
-            p.add_argument("-y", "--yes", action="store_true", help="never ask; use flags, saved answers and guesses")
-            p.add_argument(
                 "--mode", help="lifecycle: greenfield | brownfield | rewrite (refonte) | maintain (default: detected)"
             )
             p.add_argument("--topology", choices=TOPOLOGIES, help="repo shape (default: detected)")
-            p.add_argument(
-                "--teach", choices=["on", "off"], help="teaching mode: agents explain decisions (default off)"
-            )
         if name == "adopt":
             p.add_argument("--scan-only", action="store_true", help="print what was found; write nothing")
             p.add_argument("--report-only", action="store_true", help="refresh the reports; install nothing")
