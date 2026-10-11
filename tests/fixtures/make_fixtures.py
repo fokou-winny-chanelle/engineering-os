@@ -6,14 +6,11 @@ python3 tests/fixtures/make_fixtures.py workspace <dir>  4 sibling git repos (co
 
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-# core.excludesFile is pointed at the null device so the developer's global gitignore
-# (which eos bootstrap itself seeds with .env, for example) can't change what the fixtures track.
 GIT_ID = [
     "-c",
     "user.name=t",
@@ -23,13 +20,15 @@ GIT_ID = [
     "core.autocrlf=false",
     "-c",
     "commit.gpgsign=false",
-    "-c",
-    f"core.excludesFile={os.devnull}",
 ]
 
 
 def git(d: Path, *args: str) -> None:
-    subprocess.run(["git", *GIT_ID, *args], cwd=d, check=True, capture_output=True)
+    # Point core.excludesFile at a file that never exists, so the developer's global gitignore (eos bootstrap
+    # seeds .env there, for example) can't change what the fixtures track. Not os.devnull: Git for Windows
+    # rejects "nul".
+    no_excludes = f"core.excludesFile={(Path(d) / '.git' / 'eos-no-global-excludes').resolve().as_posix()}"
+    subprocess.run(["git", *GIT_ID, "-c", no_excludes, *args], cwd=d, check=True, capture_output=True)
 
 
 def write(d: Path, files: dict[str, str]) -> None:
