@@ -1,0 +1,7 @@
+# gitleaks config for the engineering-os repo itself: the default rules, plus one reviewed false positive.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "PROVENANCE.json maps vendored file paths to their SHA-256 hashes (a path containing 'OAuth2' next to a 64-hex hash looks like an API key)"
+paths = ['''(^|/)packs/vendor/PROVENANCE\.json$''']

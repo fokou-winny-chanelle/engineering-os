@@ -1,0 +1,162 @@
+name: selftest
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    # Windows unit tests have not had a hosted run yet; non-blocking until the first green run, then remove this.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: Unit tests (all OSes)
+        run: uv run --no-project --python 3.12 python -m unittest discover -s tests -v
+      - name: Library lint + vendor check
+        run: |
+          uv run --no-project --python 3.12 python bin/eos.py library lint
+          uv run --no-project --python 3.12 python bin/eos.py vendor check
+      - name: Semgrep rules (security + data + ops) pass their fixtures
+        if: runner.os == 'Linux'
+        run: |
+          d="$RUNNER_TEMP/sg" && mkdir -p "$d"
+          cp core/scaffold/security/semgrep.yml "$d/eos-security.yml" && cp tests/semgrep/* "$d/"
+          cp core/scaffold/db-safety/semgrep-data.yml "$d/eos-data.yml"
+          cp core/scaffold/ops/semgrep-ops.yml "$d/eos-ops.yml"
+          uvx semgrep --test --metrics=off "$d"
+          SEMGREP="uvx semgrep" python3 tests/semgrep_generic_check.py core/scaffold/db-safety/semgrep-data.yml tests/semgrep-generic
+      - name: Windows PowerShell 5.1 bootstrap into a home with a space, then eos.cmd
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $h = Join-Path $env:RUNNER_TEMP "Jane Doe"
+          New-Item -ItemType Directory -Force -Path $h | Out-Null
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\bootstrap.ps1 -NoPath --home "$h" --tools "cursor,cline"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          & (Join-Path $h ".local\bin\eos.cmd") --version
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: End-to-end selftest (POSIX)
+        if: runner.os != 'Windows'
+        run: |
+          uv tool install pre-commit
+          tests/selftest.sh
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: ruff (lint + format check)
+        run: |
+          uvx ruff@0.16.10 check bin tests core
+          uvx ruff@0.16.10 format --check bin tests core
+      - name: shellcheck (preinstalled on ubuntu runners)
+        run: shellcheck bootstrap.sh tests/selftest.sh tests/fixtures/*.sh git-hooks/*
+      - name: actionlint (checksummed release binary)
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/al.tgz" "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  $RUNNER_TEMP/al.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/al.tgz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint"
+      - name: pack budgets
+        run: python3 bin/eos.py budget
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: gitleaks over the full history (CLI image; uses .gitleaks.toml)
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --redact --no-banner --config /repo/.gitleaks.toml
+  schema-lint:
+    # Runs core/scaffold/db-safety/schema_lint.sql against a real Postgres (the unit test skips without one).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: schema_lint.sql catches unindexed FKs and money as float
+        env:
+          EOS_TEST_PG_DSN: postgresql://postgres:postgres@localhost:5432/postgres
+        shell: bash  # -eo pipefail, so a failing test fails the step despite tee
+        run: psql --version && python3 -m unittest tests.test_eos -k schema_lint -v 2>&1 | tee /tmp/ut.txt && ! grep -q skipped /tmp/ut.txt
+  testing-tools:
+    # Stage 5 scaffolds against the real tools: k6 parses the load scripts, mutmut 3 names mutants the way
+    # `eos mutation-plan` targets them, the Hypothesis template passes under the CI profile, and the pytest
+    # conftest honours tests/quarantine.json.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: k6 (checksummed release binary, version from versions.toml)
+        env:
+          K6_SHA256: 39c3117b6af817592dcd0ce4242105c0a7af10948c2a425306f0be8f7a8a8ab1  # k6-v2.3.0-linux-amd64.tar.gz
+        shell: bash
+        run: |
+          v=$(sed -n 's/^"k6" = "\([^"]*\)".*/\1/p' versions.toml)
+          curl -fsSLo "$RUNNER_TEMP/k6.tgz" "https://github.com/grafana/k6/releases/download/v${v}/k6-v${v}-linux-amd64.tar.gz"
+          echo "${K6_SHA256}  $RUNNER_TEMP/k6.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/k6.tgz" -C "$RUNNER_TEMP" --strip-components=1 "k6-v${v}-linux-amd64/k6"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Testing gates and tool contracts
+        env:
+          EOS_TEST_TOOLS: "1"
+        run: python3 -m unittest tests.test_eos.TestingGateTests tests.test_eos.TestingToolContractTests -v
+  api-rules:
+    # The api-contract scaffold's Spectral ruleset against its fixtures, and the oasdiff flags it uses.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Spectral eos rules pass their fixtures
+        run: |
+          v=$(sed -n 's/^"spectral-cli" = "\([^"]*\)".*/\1/p' versions.toml)
+          SPECTRAL="npx --yes @stoplight/spectral-cli@$v" python3 tests/spectral_check.py core/scaffold/api-contract/spectral.yaml tests/spectral
+      - name: oasdiff gate flags behave as the scaffold documents
+        env:
+          OASDIFF_VERSION: "1.33.0"  # the version oasdiff-action v0.1.18 runs (its Dockerfile: tufin/oasdiff:v1.33.0)
+          OASDIFF_SHA256: 43a4e328e2d13ba1552d760aa68d2485c75c5621f309f6ff64ae895188345247
+        shell: bash
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/oasdiff.tgz" "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz"
+          echo "${OASDIFF_SHA256}  $RUNNER_TEMP/oasdiff.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/oasdiff.tgz" -C "$RUNNER_TEMP" oasdiff
+          PATH="$RUNNER_TEMP:$PATH" python3 -m unittest tests.test_eos -k oasdiff_gate -v 2>&1 | tee /tmp/ut.txt && ! grep -q skipped /tmp/ut.txt

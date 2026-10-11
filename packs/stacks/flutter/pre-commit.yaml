@@ -1,0 +1,22 @@
+  - repo: local
+    hooks:
+      - id: dart-format
+        name: dart format (check)
+        entry: bash -c 'cd "{{DIR}}" && dart format --output=none --set-exit-if-changed .'
+        language: system
+        files: '\.dart$'
+        pass_filenames: false
+      - id: flutter-analyze
+        name: flutter analyze (pre-push)
+        entry: bash -c 'cd "{{DIR}}" && flutter analyze'
+        language: system
+        files: '\.dart$'
+        pass_filenames: false
+        stages: [pre-push]
+      - id: flutter-test
+        name: flutter test (pre-push)
+        entry: bash -c 'cd "{{DIR}}" && flutter test'
+        language: system
+        files: '\.dart$'
+        pass_filenames: false
+        stages: [pre-push]

@@ -1,0 +1,21 @@
+# Release automation: conventional commits on main -> a release PR with version bump + CHANGELOG.
+# Merge the release PR to tag and publish a GitHub release. Docs: https://github.com/googleapis/release-please-action
+# Note: PRs opened with the default GITHUB_TOKEN do not trigger other workflows (your CI will not run on the
+# release PR). Use a fine-grained PAT or GitHub App token in `token:` if you need CI on it.
+name: release-please
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

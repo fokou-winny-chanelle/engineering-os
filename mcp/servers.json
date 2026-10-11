@@ -1,0 +1,208 @@
+{
+  "$comment": "Canonical MCP server list. NO SECRETS HERE: use ${VAR} placeholders; values live in ~/.config/engineering-os/secrets.env (outside git). Which servers are ON comes from a profile (`eos mcp use <profile>`; per tool with --tools). `enabled: false` on a server removes it from every profile; `clients` (optional) limits a server to some tools. Cursor, Claude Code and Codex load tool schemas on demand; Cline sends every enabled server's schemas with every request, so `tokens` (re-measured 2026-10-11 with tests/bench/mcp_schema_tokens.py: name + description + compact JSON inputSchema, chars/4) is what a server costs per Cline request. null = not measured (needs auth to list tools). `launcher: eos` servers start through `eos mcp run <name>`, which applies the guard (`guard`) and pins (`run`). `safe_tools` (read-only tools) are auto-approved in Cline only if you set EOS_MCP_CLINE_AUTO_APPROVE_SAFE=1 in secrets.env; default: every tool call asks.",
+  "servers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/x/repos/readonly",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_MCP_PAT}"
+      },
+      "enabled": true,
+      "notes": "Read-only repos toolset. Fine-grained PAT: selected repos, read-only. In Cline it costs ~2,900 tokens per request while on: switch it on with a profile (build/review/api) when the task needs PRs/issues; `gh` CLI works too.",
+      "tokens": 2900
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${CONTEXT7_API_KEY}"
+      },
+      "enabled": true,
+      "notes": "Up-to-date library docs. Reduces hallucinated APIs.",
+      "tokens": 1210
+    },
+    "postman": {
+      "type": "http",
+      "url": "https://mcp.postman.com/minimal",
+      "headers": {
+        "Authorization": "Bearer ${POSTMAN_API_KEY}"
+      },
+      "enabled": true,
+      "notes": "Minimal toolset. EU data residency: https://mcp.eu.postman.com/minimal On in the `api` profile.",
+      "tokens": null
+    },
+    "figma": {
+      "type": "http",
+      "url": "https://mcp.figma.com/mcp",
+      "headers": {},
+      "enabled": true,
+      "notes": "OAuth in each client (no token stored). Desktop alternative: http://127.0.0.1:3845/mcp On in the `design` profile.",
+      "tokens": null
+    },
+    "playwright": {
+      "type": "stdio",
+      "launcher": "eos",
+      "guard": "browser",
+      "run": [
+        "npx",
+        "-y",
+        "@playwright/mcp@0.0.83",
+        "--isolated",
+        "--headless",
+        "--no-webmcp",
+        "--block-service-workers"
+      ],
+      "package": "@playwright/mcp 0.0.83 (Microsoft, Apache-2.0)",
+      "allowed_origins": [
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+        "https://localhost:*",
+        "https://127.0.0.1:*"
+      ],
+      "env": {},
+      "enabled": true,
+      "notes": "Browser for screenshots, a11y (axe) and UI debugging. In-memory profile (no saved logins), headless (EOS_MCP_BROWSER_HEADED=1 to watch), only localhost origins (add more with EOS_MCP_BROWSER_ORIGINS), output in .eos/state/playwright. Never approve browser_run_code_unsafe. On in the `design` and `debug-ui` profiles.",
+      "tokens": 4120,
+      "safe_tools": [
+        "browser_navigate",
+        "browser_navigate_back",
+        "browser_snapshot",
+        "browser_take_screenshot",
+        "browser_resize",
+        "browser_emulate_media",
+        "browser_console_messages",
+        "browser_network_requests",
+        "browser_wait_for"
+      ]
+    },
+    "postgres": {
+      "type": "stdio",
+      "launcher": "eos",
+      "guard": "postgres",
+      "run": [
+        "uv",
+        "run",
+        "--no-project",
+        "--quiet",
+        "--python",
+        ">=3.12",
+        "--with-requirements",
+        "{EOS_HOME}/mcp/postgres-mcp.lock.txt",
+        "--",
+        "postgres-mcp",
+        "--access-mode=restricted"
+      ],
+      "package": "postgres-mcp 0.3.0 (crystaldba 'Postgres MCP Pro', MIT), dependencies hash-locked in mcp/postgres-mcp.lock.txt (mcp<2)",
+      "needs": [
+        "POSTGRES_MCP_URL"
+      ],
+      "allowed_hosts": [
+        "localhost",
+        "127.0.0.1",
+        "::1",
+        "host.docker.internal",
+        "postgres",
+        "db",
+        "database",
+        "pg"
+      ],
+      "statement_timeout": "30s",
+      "enabled": true,
+      "notes": "READ-ONLY, dev/local only. `eos mcp run postgres` refuses hosts outside the allow-list (extend with EOS_MCP_PG_ALLOWED_HOSTS), forces default_transaction_read_only + statement_timeout per session and runs upstream restricted mode. Use the role from mcp/postgres-readonly-role.sql. On in the `api` and `debug` profiles.",
+      "tokens": 1220,
+      "safe_tools": [
+        "list_schemas",
+        "list_objects",
+        "get_object_details",
+        "explain_query",
+        "analyze_db_health",
+        "get_top_queries",
+        "analyze_workload_indexes",
+        "analyze_query_indexes"
+      ]
+    }
+  },
+  "profiles": {
+    "minimal": {
+      "servers": [
+        "context7"
+      ],
+      "use": "default: docs lookups only (use the gh CLI for issues and PRs; cheapest Cline sessions)"
+    },
+    "build": {
+      "servers": [
+        "context7",
+        "github"
+      ],
+      "use": "implementation with GitHub MCP: docs + read issues/PRs (+~2,900 tokens per Cline request)"
+    },
+    "review": {
+      "servers": [
+        "github",
+        "context7"
+      ],
+      "use": "code review, PR work, release notes"
+    },
+    "api": {
+      "servers": [
+        "postman",
+        "github",
+        "context7",
+        "postgres"
+      ],
+      "use": "API design, contract tests and checking queries against your local database"
+    },
+    "design": {
+      "servers": [
+        "figma",
+        "context7",
+        "playwright"
+      ],
+      "use": "UX and frontend from Figma, with a browser to screenshot and run axe"
+    },
+    "debug": {
+      "servers": [
+        "postgres",
+        "context7"
+      ],
+      "use": "backend bugs and slow queries: read-only local Postgres (schema, EXPLAIN, index advice, health)"
+    },
+    "debug-ui": {
+      "servers": [
+        "playwright",
+        "context7"
+      ],
+      "use": "UI bugs, e2e and a11y authoring"
+    },
+    "off": {
+      "servers": [],
+      "use": "no eos-managed servers"
+    }
+  },
+  "default_profile": "minimal",
+  "phase_profiles": {
+    "ideation": "minimal",
+    "discovery": "minimal",
+    "requirements": "minimal",
+    "architecture": "build",
+    "data-modeling": "build",
+    "api-design": "api",
+    "ux-design": "design",
+    "frontend": "design",
+    "backend": "build",
+    "mobile": "build",
+    "testing-qa": "debug-ui",
+    "security": "review",
+    "code-review": "review",
+    "release": "review",
+    "infra-devops": "build",
+    "operations": "build",
+    "maintenance": "build",
+    "documentation": "minimal",
+    "decisions": "minimal",
+    "design-direction": "design",
+    "agent-security": "review",
+    "performance-scale": "debug",
+    "data-ml": "build"
+  }
+}

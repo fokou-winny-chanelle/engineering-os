@@ -1,0 +1,743 @@
+{
+ "about": "Eval tasks for the API design library (stage 4). Same method as the other eval files: context coverage (pack vs pack+refs) is an availability proxy, not proof of better answers; rubric and refs share an author. Score real agent answers with --responses DIR.",
+ "tasks": [
+  {
+   "id": "list-endpoint",
+   "pack": "api-design",
+   "refs": [
+    "api/collections"
+   ],
+   "prompt": "Add GET /orders to our public API. Clients need to page through thousands of orders and filter by status.",
+   "rubric": [
+    {
+     "id": "cursor",
+     "text": "cursor/keyset pagination, opaque cursor",
+     "any": [
+      "opaque"
+     ]
+    },
+    {
+     "id": "object",
+     "text": "response is an object with items + next cursor, not a bare array",
+     "any": [
+      "bare array"
+     ]
+    },
+    {
+     "id": "max",
+     "text": "page size has a documented maximum; larger values coerced down",
+     "any": [
+      "maximum"
+     ]
+    },
+    {
+     "id": "fewer",
+     "text": "clients loop until the cursor is null, not until a short page",
+     "any": [
+      "short page|fewer"
+     ]
+    },
+    {
+     "id": "total",
+     "text": "avoid total counts (full scans; hard to remove)",
+     "any": [
+      "total count"
+     ]
+    },
+    {
+     "id": "bind",
+     "text": "cursor bound to filters; authorise every page",
+     "any": [
+      "authoris|authoriz"
+     ]
+    },
+    {
+     "id": "tiebreak",
+     "text": "stable order with unique tie-breaker",
+     "any": [
+      "tie-breaker"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "error-format",
+   "pack": "api-design",
+   "refs": [
+    "api/errors-problem-details"
+   ],
+   "prompt": "Our FastAPI service returns errors in three different shapes. Standardise them.",
+   "rubric": [
+    {
+     "id": "rfc",
+     "text": "RFC 9457 problem details",
+     "any": [
+      "9457"
+     ]
+    },
+    {
+     "id": "media",
+     "text": "application/problem+json",
+     "any": [
+      "problem\\+json"
+     ]
+    },
+    {
+     "id": "code",
+     "text": "stable machine-readable code extension",
+     "any": [
+      "machine-readable|`code`"
+     ]
+    },
+    {
+     "id": "detail",
+     "text": "clients must not parse detail",
+     "any": [
+      "not parse|SHOULD NOT parse"
+     ]
+    },
+    {
+     "id": "errors",
+     "text": "validation errors as an errors[] list with JSON pointers",
+     "any": [
+      "pointer"
+     ]
+    },
+    {
+     "id": "notrace",
+     "text": "no stack traces or SQL",
+     "any": [
+      "stack trace"
+     ]
+    },
+    {
+     "id": "handler",
+     "text": "one global exception handler",
+     "any": [
+      "global handler|exception handler"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "retry-safe-create",
+   "pack": "api-design",
+   "refs": [
+    "api/reliability",
+    "architecture/data-consistency"
+   ],
+   "prompt": "The mobile app sometimes creates duplicate payments when the network times out and the user taps retry. Fix the API.",
+   "rubric": [
+    {
+     "id": "key",
+     "text": "Idempotency-Key header per logical operation",
+     "any": [
+      "Idempotency-Key"
+     ]
+    },
+    {
+     "id": "draft",
+     "text": "note it is a de-facto convention; IETF draft expired",
+     "any": [
+      "expired|de-facto"
+     ]
+    },
+    {
+     "id": "hash",
+     "text": "reject same key with different body",
+     "any": [
+      "different (request )?hash|different body|mismatch"
+     ]
+    },
+    {
+     "id": "inflight",
+     "text": "concurrent duplicate gets 409",
+     "any": [
+      "409"
+     ]
+    },
+    {
+     "id": "txn",
+     "text": "key stored in the same transaction as the write",
+     "any": [
+      "same transaction"
+     ]
+    },
+    {
+     "id": "ttl",
+     "text": "keep keys at least 24 hours",
+     "any": [
+      "24 hours"
+     ]
+    },
+    {
+     "id": "tenant",
+     "text": "keys scoped per tenant",
+     "any": [
+      "tenant"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lost-update",
+   "pack": "api-design",
+   "refs": [
+    "api/reliability"
+   ],
+   "prompt": "Two admins editing the same product overwrite each other's changes. Design the API fix.",
+   "rubric": [
+    {
+     "id": "etag",
+     "text": "ETag + If-Match",
+     "any": [
+      "If-Match"
+     ]
+    },
+    {
+     "id": "412",
+     "text": "412 Precondition Failed on mismatch",
+     "any": [
+      "412"
+     ]
+    },
+    {
+     "id": "428",
+     "text": "428 Precondition Required when missing",
+     "any": [
+      "428"
+     ]
+    },
+    {
+     "id": "version",
+     "text": "version column in UPDATE ... WHERE version",
+     "any": [
+      "version"
+     ]
+    },
+    {
+     "id": "lastmod",
+     "text": "prefer ETags to Last-Modified (1 s resolution)",
+     "any": [
+      "Last-Modified"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "slow-report",
+   "pack": "api-design",
+   "refs": [
+    "api/reliability"
+   ],
+   "prompt": "POST /reports takes 2-3 minutes and times out behind our load balancer. Redesign it.",
+   "rubric": [
+    {
+     "id": "202",
+     "text": "202 Accepted + Location of an operation/status resource",
+     "any": [
+      "202"
+     ]
+    },
+    {
+     "id": "validate",
+     "text": "validate before accepting",
+     "any": [
+      "validate"
+     ]
+    },
+    {
+     "id": "status",
+     "text": "status enum with terminal states",
+     "any": [
+      "SUCCEEDED|terminal"
+     ]
+    },
+    {
+     "id": "poll",
+     "text": "Retry-After / polling or webhook on completion",
+     "any": [
+      "Retry-After|webhook"
+     ]
+    },
+    {
+     "id": "p99",
+     "text": "LRO threshold about 1 second p99",
+     "any": [
+      "1 second|p99"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "rename-field",
+   "pack": "api-design",
+   "refs": [
+    "api/evolution"
+   ],
+   "prompt": "We want to rename `customer_name` to `full_name` in our order API response. Mobile apps v1-v3 are in the stores.",
+   "rubric": [
+    {
+     "id": "breaking",
+     "text": "removing/renaming a field is breaking",
+     "any": [
+      "breaking"
+     ]
+    },
+    {
+     "id": "additive",
+     "text": "add the new field, keep the old one",
+     "any": [
+      "add the new|add a new field|add .{0,20}field"
+     ]
+    },
+    {
+     "id": "deprecate",
+     "text": "deprecated: true + x-sunset",
+     "any": [
+      "x-sunset"
+     ]
+    },
+    {
+     "id": "headers",
+     "text": "Deprecation (RFC 9745) and Sunset (RFC 8594) headers",
+     "any": [
+      "9745"
+     ]
+    },
+    {
+     "id": "measure",
+     "text": "measure usage by client/app version before removal",
+     "any": [
+      "usage"
+     ]
+    },
+    {
+     "id": "gate",
+     "text": "oasdiff breaking-change gate",
+     "any": [
+      "oasdiff"
+     ]
+    },
+    {
+     "id": "mobile",
+     "text": "old app versions live for years / minimum supported version",
+     "any": [
+      "minimum.supported|old app"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "versioning-choice",
+   "pack": "api-design",
+   "refs": [
+    "api/evolution"
+   ],
+   "prompt": "Should our new partner API put versions in the URL, a header, or not version at all?",
+   "rubric": [
+    {
+     "id": "options",
+     "text": "compares path, dated header, media type, no version",
+     "any": [
+      "media type"
+     ]
+    },
+    {
+     "id": "major",
+     "text": "major-only versions (v1, never v1.1)",
+     "any": [
+      "v1\\.1"
+     ]
+    },
+    {
+     "id": "dated",
+     "text": "dated versions like Stripe/GitHub",
+     "any": [
+      "Stripe-Version|X-GitHub-Api-Version"
+     ]
+    },
+    {
+     "id": "compat",
+     "text": "evolve compatibly; clients ignore unknown fields",
+     "any": [
+      "unknown fields"
+     ]
+    },
+    {
+     "id": "enum",
+     "text": "new enum values only if documented as open",
+     "any": [
+      "enum"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "spec-and-clients",
+   "pack": "api-design",
+   "refs": [
+    "api/contract-first"
+   ],
+   "prompt": "Set up our FastAPI backend so the Next.js app and the Flutter app always use correct, up-to-date API types.",
+   "rubric": [
+    {
+     "id": "committed",
+     "text": "committed spec regenerated in CI with git diff --exit-code",
+     "any": [
+      "exit-code"
+     ]
+    },
+    {
+     "id": "oas31",
+     "text": "OpenAPI 3.1 (3.2 only when tools support it)",
+     "any": [
+      "3\\.1"
+     ]
+    },
+    {
+     "id": "ts",
+     "text": "openapi-typescript/openapi-fetch or Hey API for Next.js",
+     "any": [
+      "openapi-typescript|openapi-fetch|hey-api"
+     ]
+    },
+    {
+     "id": "mobile",
+     "text": "OpenAPI Generator dart/dart-dio for Flutter",
+     "any": [
+      "dart"
+     ]
+    },
+    {
+     "id": "unknown",
+     "text": "generated models tolerate unknown fields and enum values",
+     "any": [
+      "unknown enum|unknown fields"
+     ]
+    },
+    {
+     "id": "opid",
+     "text": "stable operationIds",
+     "any": [
+      "operationId"
+     ]
+    },
+    {
+     "id": "lint",
+     "text": "Spectral lint in CI",
+     "any": [
+      "Spectral"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "outbound-webhooks",
+   "pack": "api-design",
+   "refs": [
+    "api/webhooks"
+   ],
+   "prompt": "Customers want webhooks when an invoice is paid. Design the sending side.",
+   "rubric": [
+    {
+     "id": "std",
+     "text": "Standard Webhooks headers and HMAC signature",
+     "any": [
+      "webhook-signature"
+     ]
+    },
+    {
+     "id": "secret",
+     "text": "secret per endpoint, rotation with two signatures",
+     "any": [
+      "per-endpoint|rotation"
+     ]
+    },
+    {
+     "id": "outbox",
+     "text": "outbox in the same transaction",
+     "any": [
+      "outbox"
+     ]
+    },
+    {
+     "id": "retry",
+     "text": "exponential backoff with jitter over about three days",
+     "any": [
+      "three days|jitter"
+     ]
+    },
+    {
+     "id": "order",
+     "text": "at-least-once, no ordering guarantee; receivers dedupe",
+     "any": [
+      "ordering"
+     ]
+    },
+    {
+     "id": "ssrf",
+     "text": "SSRF: egress proxy, block internal addresses",
+     "any": [
+      "SSRF"
+     ]
+    },
+    {
+     "id": "replay",
+     "text": "events API / redelivery for replay",
+     "any": [
+      "replay|redeliver"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "rate-limit-headers",
+   "pack": "api-design",
+   "refs": [
+    "api/rate-limits-auth"
+   ],
+   "prompt": "Add rate limiting to our public REST API and tell clients how much quota they have left.",
+   "rubric": [
+    {
+     "id": "429",
+     "text": "429 + Retry-After",
+     "any": [
+      "Retry-After"
+     ]
+    },
+    {
+     "id": "draft",
+     "text": "RateLimit/RateLimit-Policy fields are an active draft, not an RFC",
+     "any": [
+      "draft"
+     ]
+    },
+    {
+     "id": "legacy",
+     "text": "legacy X-RateLimit-* is non-standard",
+     "any": [
+      "X-RateLimit"
+     ]
+    },
+    {
+     "id": "key",
+     "text": "limit per credential, not only IP",
+     "any": [
+      "credential"
+     ]
+    },
+    {
+     "id": "algo",
+     "text": "token bucket / sliding window",
+     "any": [
+      "token bucket|sliding window"
+     ]
+    },
+    {
+     "id": "expensive",
+     "text": "stricter limits on expensive or abuse-prone operations",
+     "any": [
+      "expensive|OTP|login"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "api-auth",
+   "pack": "api-design",
+   "refs": [
+    "api/rate-limits-auth",
+    "security/authorization"
+   ],
+   "prompt": "We are opening our API to partners. How should they authenticate, and how do we stop them reading other partners' data?",
+   "rubric": [
+    {
+     "id": "keys",
+     "text": "API keys hashed, scoped, rotatable, or OAuth client credentials",
+     "any": [
+      "client credentials|hashed"
+     ]
+    },
+    {
+     "id": "scopes",
+     "text": "scopes are coarse; object-level checks still required",
+     "any": [
+      "object-level|BOLA"
+     ]
+    },
+    {
+     "id": "404",
+     "text": "404 for objects the caller must not know exist",
+     "any": [
+      "404"
+     ]
+    },
+    {
+     "id": "token",
+     "text": "tenant derived from the token, not the body",
+     "any": [
+      "token"
+     ]
+    },
+    {
+     "id": "spec",
+     "text": "securitySchemes + security on every operation",
+     "any": [
+      "securitySchemes|security: \\[\\]"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "graphql-choice",
+   "pack": "api-design",
+   "refs": [
+    "api/graphql",
+    "architecture/api-performance"
+   ],
+   "prompt": "Our web and mobile teams want GraphQL instead of REST. Should we, and what must we get right?",
+   "rubric": [
+    {
+     "id": "fit",
+     "text": "fits several first-party clients over connected data; BFF alternative",
+     "any": [
+      "BFF"
+     ]
+    },
+    {
+     "id": "trusted",
+     "text": "trusted/persisted documents",
+     "any": [
+      "trusted|persisted"
+     ]
+    },
+    {
+     "id": "limits",
+     "text": "depth / cost limits",
+     "any": [
+      "depth|complexity|cost"
+     ]
+    },
+    {
+     "id": "dataloader",
+     "text": "DataLoader per request for N+1",
+     "any": [
+      "DataLoader"
+     ]
+    },
+    {
+     "id": "authz",
+     "text": "authorise in the business layer, every path",
+     "any": [
+      "business layer"
+     ]
+    },
+    {
+     "id": "evolve",
+     "text": "evolve with @deprecated, schema diff in CI",
+     "any": [
+      "@deprecated|schema diff"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "proto-change",
+   "pack": "architecture",
+   "refs": [
+    "api/grpc-async"
+   ],
+   "prompt": "I'm removing the `discount` field from our gRPC Order message and adding `discounts` as a repeated field.",
+   "rubric": [
+    {
+     "id": "reserve",
+     "text": "reserve the old field number and name",
+     "any": [
+      "reserved"
+     ]
+    },
+    {
+     "id": "reuse",
+     "text": "never reuse field numbers",
+     "any": [
+      "reuse"
+     ]
+    },
+    {
+     "id": "buf",
+     "text": "buf breaking against main in CI",
+     "any": [
+      "buf breaking"
+     ]
+    },
+    {
+     "id": "deadline",
+     "text": "(context) set deadlines on calls",
+     "any": [
+      "deadline"
+     ]
+    },
+    {
+     "id": "unspecified",
+     "text": "enums with UNSPECIFIED zero value",
+     "any": [
+      "UNSPECIFIED"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fuzz-api",
+   "pack": "testing-qa",
+   "refs": [
+    "api/testing"
+   ],
+   "prompt": "How do we test that our API actually matches its OpenAPI spec and doesn't crash on weird input?",
+   "rubric": [
+    {
+     "id": "st",
+     "text": "Schemathesis property-based testing",
+     "any": [
+      "Schemathesis"
+     ]
+    },
+    {
+     "id": "checks",
+     "text": "checks: server errors, schema conformance, ignored_auth",
+     "any": [
+      "ignored_auth|not_a_server_error"
+     ]
+    },
+    {
+     "id": "stateful",
+     "text": "stateful phase / links",
+     "any": [
+      "stateful"
+     ]
+    },
+    {
+     "id": "env",
+     "text": "disposable environment, never production",
+     "any": [
+      "disposable|never production"
+     ]
+    },
+    {
+     "id": "pact",
+     "text": "Pact only when you own both sides; not for public APIs",
+     "any": [
+      "Pact"
+     ]
+    },
+    {
+     "id": "handwritten",
+     "text": "hand-written authz/idempotency cases",
+     "any": [
+      "cross-tenant|idempotency"
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,7 @@
+# engineering-os -> BMAD architect (Winston). Data-modeling and API-design packs are skills (eos-data-modeling,
+# eos-api-design): use them when the design reaches schemas or contracts instead of loading them every session.
+[agent]
+persistent_facts = [
+  "Every significant decision becomes an ADR in docs/adr/ (template 0000) with an INDEX line; one-way doors need human approval.",
+  "file:{project-root}/.eos/packs/phases/architecture.md",
+]

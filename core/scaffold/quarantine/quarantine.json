@@ -1,0 +1,4 @@
+{
+  "about": "Flaky tests under quarantine: they still run but cannot fail the build. Each entry needs id, reason, owner, issue, added, expires (max 14 days by default). `eos check` fails on expired or incomplete entries. Add with: eos quarantine add <id> --reason ... --owner @you --issue <url>. Edits to this file need human review (eos test-integrity).",
+  "tests": []
+}

@@ -1,0 +1,63 @@
+# engineering-os core CI: stack-agnostic gates. Pin actions by SHA (Renovate `helpers:pinGitHubActionDigests`).
+name: eos-core
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ai-context:
+    name: AI context budget, adapter drift, test integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: eos check (budgets + adapters in sync with .eos/packs)
+        run: python3 .eos/bin/eos.py check
+      - name: Lane (risk class + files that need human review, in the job summary; fails only for spike/* PRs)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          EOS_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: python3 .eos/bin/eos.py lane --ci --base "origin/${BASE_REF}"
+      - name: Test integrity (new skips, removed asserts, lowered thresholds)
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'test-change-approved')
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 .eos/bin/eos.py test-integrity --base "origin/${BASE_REF}"
+  secrets:
+    name: Secrets scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: gitleaks (CLI image; the gitleaks-action needs a licence for org repos)
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --redact --no-banner
+  migrations:
+    name: Migration safety (squawk on changed SQL migrations)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: squawk (locks, table rewrites, non-concurrent indexes; uses .squawk.toml); Alembic users see `eos scaffold db-safety`
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          files=$(git diff --name-only --diff-filter=AM "$BASE_SHA"...HEAD | grep -E '(^|/)(migrations|drizzle)/.*\.sql$' || true)
+          if [ -z "$files" ]; then echo "no SQL migrations changed"; exit 0; fi
+          echo "$files" | xargs npx -y squawk-cli@2.68.0

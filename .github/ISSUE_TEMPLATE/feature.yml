@@ -1,0 +1,21 @@
+name: Feature or pack proposal
+description: Propose a command, check, pack or reference
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What slows you down or goes wrong today? Concrete examples help most.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should eos do? If it adds always-on context, explain why it can't load on demand.
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: Official docs or releases that back the proposal (versions, limits, behaviour).

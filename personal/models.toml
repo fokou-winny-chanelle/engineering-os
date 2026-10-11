@@ -1,0 +1,49 @@
+# Model routing for Cline + OpenRouter (and a guide for picking models in Cursor / Claude Code / Codex).
+# Optimise for outcome per task, not minimal spend: a premium model that gets a hard bug right
+# in one pass is cheaper than three cheap passes plus your review time.
+# `eos models` prints this; `eos models --check` verifies every id against the live OpenRouter
+# catalogue and shows today's price; `eos models --usage` compares your key's spend with the caps.
+# Model ids below are EXAMPLES that existed in https://openrouter.ai/api/v1/models on 2026-10-09.
+# Swap them freely (or override in personal/models.user.toml, git-ignored); then `eos models --check`.
+# Prices are never stored here.
+
+[tiers.premium]
+use = "planning, architecture, code review, security review, hard or repeated-failure debugging"
+models = ["anthropic/claude-opus-5.5", "openai/gpt-6-astra"]
+
+[tiers.strong]
+use = "implementation of a planned story, refactors, writing tests"
+models = ["anthropic/claude-sonnet-5.5", "openai/gpt-6.1-sol"]
+
+[tiers.cheap]
+use = "bulk and mechanical work: renames, docs, summaries, commit messages, simple test data"
+models = ["anthropic/claude-haiku-5.5", "deepseek/deepseek-v4.1-flash", "openai/gpt-6-luna"]
+
+# Task -> tier. Cline: Settings > "Use different models for Plan and Act" (Plan = premium, Act = strong).
+[routing]
+plan = "premium"
+architecture = "premium"
+review = "premium"
+security = "premium"
+debug-hard = "premium"
+implement = "strong"
+test = "strong"
+refactor = "strong"
+debug = "strong"
+docs = "cheap"
+bulk = "cheap"
+
+[policy]
+# Escalate one tier after this many failed attempts at the same task (the guard stops loops at 3).
+escalate_after_failures = 2
+
+# Budget caps are a setting, not a design constraint. Enforce them where they bite: set a
+# per-key credit limit with a reset on the OpenRouter key Cline uses
+# (https://openrouter.ai/docs/api_reference/limits). These numbers are only used by
+# `eos models --usage` to warn you; 0 = no cap.
+[budget]
+currency = "USD"
+daily = 0
+weekly = 0
+monthly = 0
+warn_at = 0.8

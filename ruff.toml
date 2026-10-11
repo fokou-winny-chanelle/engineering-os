@@ -1,0 +1,5 @@
+# Lint config for the engineering-os repo itself (eos.py is stdlib-only, Python >= 3.10).
+line-length = 120
+target-version = "py310"
+# Vendored third-party files must stay byte-identical (hashed in packs/vendor/PROVENANCE.json).
+extend-exclude = ["packs/vendor"]

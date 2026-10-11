@@ -1,0 +1,9 @@
+# engineering-os
+.eos/state/
+.eos/bin/__pycache__/
+*.eos-new
+*.eos-bak
+_bmad/custom/*.user.toml
+.env
+.env.*
+!.env.example

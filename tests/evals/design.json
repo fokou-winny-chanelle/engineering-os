@@ -1,0 +1,730 @@
+{
+ "about": "Eval tasks for the design / UX library (stage 8). Same method as the other eval files: context coverage (pack vs pack+refs) is an availability proxy, not proof of better answers; rubric and refs share an author. Score real agent answers with --responses DIR.",
+ "tasks": [
+  {
+   "id": "direction-first",
+   "pack": "design-direction",
+   "refs": [
+    "design/direction-process"
+   ],
+   "prompt": "We're starting a new marketplace app UI. What do we write before building screens?",
+   "rubric": [
+    {
+     "id": "adjectives",
+     "text": "brand attributes / adjectives and anti-adjectives",
+     "any": [
+      "adjective|attribute"
+     ]
+    },
+    {
+     "id": "refs",
+     "text": "references and anti-references",
+     "any": [
+      "anti-reference"
+     ]
+    },
+    {
+     "id": "bold",
+     "text": "one bold thing",
+     "any": [
+      "one bold thing"
+     ]
+    },
+    {
+     "id": "approve",
+     "text": "a human approves / locks the direction",
+     "any": [
+      "approv|lock"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "generic-tells",
+   "pack": "design-direction",
+   "refs": [
+    "design/generic-ai-look"
+   ],
+   "prompt": "Review this landing page plan: Inter font, purple-to-indigo gradient hero, centred headline and three feature cards with emoji icons. Feedback?",
+   "rubric": [
+    {
+     "id": "font",
+     "text": "Inter-only is a default tell",
+     "any": [
+      "Inter"
+     ]
+    },
+    {
+     "id": "gradient",
+     "text": "purple/indigo gradient is a default",
+     "any": [
+      "purple|indigo"
+     ]
+    },
+    {
+     "id": "cards",
+     "text": "centred hero + 3 cards layout",
+     "any": [
+      "3 (feature )?cards|three (feature )?cards"
+     ]
+    },
+    {
+     "id": "emoji",
+     "text": "emoji as icons; use an icon set with labels",
+     "any": [
+      "emoji"
+     ]
+    },
+    {
+     "id": "instead",
+     "text": "say what to choose instead",
+     "any": [
+      "instead"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lint-findings",
+   "pack": "design-direction",
+   "refs": [
+    "design/generic-ai-look"
+   ],
+   "prompt": "What does eos flag automatically for the generic AI look?",
+   "rubric": [
+    {
+     "id": "raw",
+     "text": "raw/literal colours outside tokens",
+     "any": [
+      "raw colou?r|literal colou?r"
+     ]
+    },
+    {
+     "id": "fonts",
+     "text": "default-only fonts",
+     "any": [
+      "default.{0,20}font"
+     ]
+    },
+    {
+     "id": "motion",
+     "text": "motion without reduced-motion handling",
+     "any": [
+      "reduced.motion"
+     ]
+    },
+    {
+     "id": "shadcn",
+     "text": "stock shadcn theme",
+     "any": [
+      "shadcn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "type-scale",
+   "pack": "design-direction",
+   "refs": [
+    "design/typography"
+   ],
+   "prompt": "Pick a type system for a French/English product website.",
+   "rubric": [
+    {
+     "id": "pairs",
+     "text": "at most two families / pairing",
+     "any": [
+      "two families|2 families|pairing"
+     ]
+    },
+    {
+     "id": "measure",
+     "text": "line length 45–90 characters",
+     "any": [
+      "45.{0,3}90"
+     ]
+    },
+    {
+     "id": "accents",
+     "text": "test accented capitals and Latin Extended (ɛ ɔ ŋ)",
+     "any": [
+      "ɛ|Latin Extended"
+     ]
+    },
+    {
+     "id": "nbsp",
+     "text": "French spacing with narrow no-break space",
+     "any": [
+      "U\\+202F|narrow no-break"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "variable-fonts",
+   "pack": "design-direction",
+   "refs": [
+    "design/typography"
+   ],
+   "prompt": "Should we use a variable font and how do we load it fast in Next.js?",
+   "rubric": [
+    {
+     "id": "axes",
+     "text": "variable font axes (wght etc.)",
+     "any": [
+      "axes|axis|wght"
+     ]
+    },
+    {
+     "id": "selfhost",
+     "text": "next/font self-hosts",
+     "any": [
+      "next/font"
+     ]
+    },
+    {
+     "id": "subset",
+     "text": "subset / only weights needed",
+     "any": [
+      "subset|latin-ext"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "oklch-palette",
+   "pack": "design-direction",
+   "refs": [
+    "design/colour"
+   ],
+   "prompt": "How should we build our colour palette and dark mode?",
+   "rubric": [
+    {
+     "id": "oklch",
+     "text": "use OKLCH ramps",
+     "any": [
+      "OKLCH"
+     ]
+    },
+    {
+     "id": "tiers",
+     "text": "primitives and semantic tokens (two tiers)",
+     "any": [
+      "semantic"
+     ]
+    },
+    {
+     "id": "onpairs",
+     "text": "on-* pairs checked for contrast",
+     "any": [
+      "on-"
+     ]
+    },
+    {
+     "id": "dark",
+     "text": "dark mode is a token set / not inverted",
+     "any": [
+      "dark"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "apca-vs-wcag",
+   "pack": "design-direction",
+   "refs": [
+    "design/colour"
+   ],
+   "prompt": "Should we use APCA instead of WCAG contrast ratios?",
+   "rubric": [
+    {
+     "id": "wcag",
+     "text": "WCAG 2 AA 4.5:1 is the requirement",
+     "any": [
+      "4\\.5:1"
+     ]
+    },
+    {
+     "id": "advisory",
+     "text": "APCA is advisory / not a standard yet",
+     "any": [
+      "advisory|not (yet )?a standard|draft"
+     ]
+    },
+    {
+     "id": "large",
+     "text": "3:1 for large text / UI",
+     "any": [
+      "3:1"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "shadcn-muted",
+   "pack": "design-direction",
+   "refs": [
+    "design/colour"
+   ],
+   "prompt": "eos design check fails on the stock shadcn muted-foreground on muted. Bug?",
+   "rubric": [
+    {
+     "id": "ratio",
+     "text": "it is 4.33:1, below 4.5",
+     "any": [
+      "4\\.33"
+     ]
+    },
+    {
+     "id": "fix",
+     "text": "darken the foreground or contrast_ignore with a reason",
+     "any": [
+      "contrast_ignore|darken"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "hierarchy",
+   "pack": "design-direction",
+   "refs": [
+    "design/layout-hierarchy"
+   ],
+   "prompt": "The dashboard feels flat and busy. How do we fix hierarchy?",
+   "rubric": [
+    {
+     "id": "tools",
+     "text": "size, colour/contrast and spacing/grouping",
+     "any": [
+      "size|scale"
+     ]
+    },
+    {
+     "id": "squint",
+     "text": "squint / blur test",
+     "any": [
+      "squint"
+     ]
+    },
+    {
+     "id": "primary",
+     "text": "one primary action",
+     "any": [
+      "one primary"
+     ]
+    },
+    {
+     "id": "spacing",
+     "text": "spacing scale (4px)",
+     "any": [
+      "4.?px"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "motion-reduced",
+   "pack": "design-direction",
+   "refs": [
+    "design/motion-icons-imagery"
+   ],
+   "prompt": "Add animations to our onboarding. Guidelines?",
+   "rubric": [
+    {
+     "id": "purpose",
+     "text": "motion must have a purpose",
+     "any": [
+      "purpose"
+     ]
+    },
+    {
+     "id": "duration",
+     "text": "short durations (100–500 ms), ease-out",
+     "any": [
+      "100.{0,5}500|ease-out"
+     ]
+    },
+    {
+     "id": "reduce",
+     "text": "honour prefers-reduced-motion",
+     "any": [
+      "prefers-reduced-motion"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "icons",
+   "pack": "design-direction",
+   "refs": [
+    "design/motion-icons-imagery"
+   ],
+   "prompt": "Can we use icons without labels in the bottom bar?",
+   "rubric": [
+    {
+     "id": "labels",
+     "text": "label icons with text",
+     "any": [
+      "label"
+     ]
+    },
+    {
+     "id": "licence",
+     "text": "check the icon set licence",
+     "any": [
+      "licen[cs]e"
+     ]
+    },
+    {
+     "id": "alt",
+     "text": "alt text for meaningful images",
+     "any": [
+      "alt"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "critique-loop",
+   "pack": "design-direction",
+   "refs": [
+    "design/critique-rubric"
+   ],
+   "prompt": "How should an agent critique the UI it just built?",
+   "rubric": [
+    {
+     "id": "screens",
+     "text": "screenshot phone and desktop, light and dark",
+     "any": [
+      "360|screenshot"
+     ]
+    },
+    {
+     "id": "score",
+     "text": "score 12 rows 0/1/2 with evidence",
+     "any": [
+      "evidence"
+     ]
+    },
+    {
+     "id": "top3",
+     "text": "fix the top 3 then re-shoot",
+     "any": [
+      "top 3"
+     ]
+    },
+    {
+     "id": "human",
+     "text": "a human reviews; agent can't judge FR register/context alone",
+     "any": [
+      "human"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "usability-small",
+   "pack": "ux-design",
+   "refs": [
+    "design/critique-rubric"
+   ],
+   "prompt": "We're a 3-person team. How do we usability test cheaply?",
+   "rubric": [
+    {
+     "id": "five",
+     "text": "5 users per round, then iterate",
+     "any": [
+      "5 users"
+     ]
+    },
+    {
+     "id": "tasks",
+     "text": "realistic tasks and a script",
+     "any": [
+      "task"
+     ]
+    },
+    {
+     "id": "inperson",
+     "text": "in person where possible; remote moderated otherwise",
+     "any": [
+      "in person"
+     ]
+    },
+    {
+     "id": "heuristic",
+     "text": "heuristic review with several evaluators",
+     "any": [
+      "heuristic"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "tokens-pipeline",
+   "pack": "design-direction",
+   "refs": [
+    "design/tokens-pipeline"
+   ],
+   "prompt": "How do we get tokens from Figma to CSS, Tailwind and Flutter?",
+   "rubric": [
+    {
+     "id": "dtcg",
+     "text": "DTCG token files are the source of truth",
+     "any": [
+      "DTCG"
+     ]
+    },
+    {
+     "id": "sd",
+     "text": "Style Dictionary builds outputs",
+     "any": [
+      "Style Dictionary"
+     ]
+    },
+    {
+     "id": "theme",
+     "text": "Tailwind @theme variables",
+     "any": [
+      "@theme"
+     ]
+    },
+    {
+     "id": "check",
+     "text": "eos design check validates",
+     "any": [
+      "eos design check"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "figma-mcp",
+   "pack": "ux-design",
+   "refs": [
+    "design/tokens-pipeline"
+   ],
+   "prompt": "Can the agent read our Figma file and generate components?",
+   "rubric": [
+    {
+     "id": "mcp",
+     "text": "Figma MCP server tools",
+     "any": [
+      "MCP"
+     ]
+    },
+    {
+     "id": "reuse",
+     "text": "map to existing components first",
+     "any": [
+      "existing component"
+     ]
+    },
+    {
+     "id": "secrets",
+     "text": "keep MCP secrets out of git",
+     "any": [
+      "secret"
+     ]
+    },
+    {
+     "id": "seat",
+     "text": "the Variables REST API needs an Enterprise seat",
+     "any": [
+      "Enterprise"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "error-messages",
+   "pack": "ux-design",
+   "refs": [
+    "design/forms-states-copy"
+   ],
+   "prompt": "Write guidelines for form error messages in French and English.",
+   "rubric": [
+    {
+     "id": "what",
+     "text": "say what happened and how to fix it",
+     "any": [
+      "how to fix|what happened"
+     ]
+    },
+    {
+     "id": "labels",
+     "text": "labels, not placeholders",
+     "any": [
+      "placeholder"
+     ]
+    },
+    {
+     "id": "phone",
+     "text": "Cameroon phone +237 with 9 digits",
+     "any": [
+      "\\+237"
+     ]
+    },
+    {
+     "id": "tone",
+     "text": "vous/tu decision and short sentences",
+     "any": [
+      "vous"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "loading-states",
+   "pack": "ux-design",
+   "refs": [
+    "design/forms-states-copy"
+   ],
+   "prompt": "Spinner, skeleton or progress bar?",
+   "rubric": [
+    {
+     "id": "limits",
+     "text": "0.1 / 1 / 10 second limits",
+     "any": [
+      "10 s|10 second"
+     ]
+    },
+    {
+     "id": "skeleton",
+     "text": "skeleton for loads under 10 s",
+     "any": [
+      "skeleton"
+     ]
+    },
+    {
+     "id": "progress",
+     "text": "progress bar for long waits",
+     "any": [
+      "progress"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "navigation",
+   "pack": "mobile",
+   "refs": [
+    "design/ia-navigation-platforms"
+   ],
+   "prompt": "Bottom tab bar or hamburger menu for our mobile app?",
+   "rubric": [
+    {
+     "id": "hamburger",
+     "text": "hidden navigation cuts discoverability",
+     "any": [
+      "hamburger|discoverab"
+     ]
+    },
+    {
+     "id": "tabs",
+     "text": "tabs for navigation, not actions",
+     "any": [
+      "not actions|actions"
+     ]
+    },
+    {
+     "id": "targets",
+     "text": "44pt (iOS) vs 48dp (Android) targets",
+     "any": [
+      "48"
+     ]
+    },
+    {
+     "id": "back",
+     "text": "Android predictive back",
+     "any": [
+      "predictive back"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "chart-colours",
+   "pack": "ux-design",
+   "refs": [
+    "design/data-visualisation"
+   ],
+   "prompt": "Design charts for sales by region in our admin.",
+   "rubric": [
+    {
+     "id": "task",
+     "text": "chart type by task",
+     "any": [
+      "task"
+     ]
+    },
+    {
+     "id": "seven",
+     "text": "at most ~7 categorical colours",
+     "any": [
+      "7"
+     ]
+    },
+    {
+     "id": "table",
+     "text": "offer a table / accessible alternative",
+     "any": [
+      "table"
+     ]
+    },
+    {
+     "id": "xaf",
+     "text": "FCFA with zero decimals",
+     "any": [
+      "XAF|FCFA"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cameroon-users",
+   "pack": "ux-design",
+   "refs": [
+    "design/cameroon-context"
+   ],
+   "prompt": "Our users are small traders in Cameroon. What should shape the design?",
+   "rubric": [
+    {
+     "id": "bilingual",
+     "text": "French and English with equal quality",
+     "any": [
+      "French and English"
+     ]
+    },
+    {
+     "id": "literacy",
+     "text": "lower literacy: plain words, icons with text, few steps",
+     "any": [
+      "literacy"
+     ]
+    },
+    {
+     "id": "data",
+     "text": "data cost / low-end phones",
+     "any": [
+      "data"
+     ]
+    },
+    {
+     "id": "decimals",
+     "text": "drop the decimals",
+     "any": [
+      "[Dd]rop the decimals"
+     ]
+    },
+    {
+     "id": "validate",
+     "text": "validate with local users",
+     "any": [
+      "local users|5 real users"
+     ]
+    }
+   ]
+  }
+ ]
+}

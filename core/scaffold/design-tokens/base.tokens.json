@@ -1,0 +1,470 @@
+{
+  "$description": "Starter tokens (DTCG 2025.10). A sample, not a direction: replace values with the palette, type and scale from docs/design/direction.md, then run `eos design check`.",
+  "color": {
+    "$type": "color",
+    "base": {
+      "$description": "Primitives: referenced only by semantic tokens below",
+      "green": {
+        "400": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.74,
+              0.13,
+              155
+            ],
+            "hex": "#5ec386"
+          }
+        },
+        "600": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.55,
+              0.12,
+              155
+            ],
+            "hex": "#258651"
+          }
+        },
+        "700": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.46,
+              0.105,
+              155
+            ],
+            "hex": "#14693d"
+          }
+        }
+      },
+      "ochre": {
+        "400": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.82,
+              0.13,
+              82
+            ],
+            "hex": "#eebb58"
+          }
+        },
+        "700": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.5,
+              0.09,
+              70
+            ],
+            "hex": "#845922"
+          }
+        }
+      },
+      "red": {
+        "400": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.72,
+              0.14,
+              28
+            ],
+            "hex": "#ef7f72"
+          }
+        },
+        "700": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.5,
+              0.17,
+              28
+            ],
+            "hex": "#af2b25"
+          }
+        }
+      },
+      "ink": {
+        "600": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.46,
+              0.02,
+              250
+            ],
+            "hex": "#505963"
+          }
+        },
+        "700": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.37,
+              0.02,
+              250
+            ],
+            "hex": "#38414a"
+          }
+        },
+        "900": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.22,
+              0.02,
+              250
+            ],
+            "hex": "#141b24"
+          }
+        },
+        "950": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.17,
+              0.015,
+              250
+            ],
+            "hex": "#0a1016"
+          }
+        }
+      },
+      "slate": {
+        "300": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.78,
+              0.015,
+              250
+            ],
+            "hex": "#b0b8c1"
+          }
+        },
+        "800": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.25,
+              0.018,
+              250
+            ],
+            "hex": "#1b222a"
+          }
+        }
+      },
+      "paper": {
+        "50": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.985,
+              0.004,
+              90
+            ],
+            "hex": "#fbfaf7"
+          }
+        },
+        "100": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.955,
+              0.008,
+              90
+            ],
+            "hex": "#f2f0ea"
+          }
+        },
+        "200": {
+          "$value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.91,
+              0.01,
+              90
+            ],
+            "hex": "#e4e1da"
+          }
+        }
+      }
+    },
+    "$description": "Semantic roles: components use these, never color.base.*",
+    "bg": {
+      "$value": "{color.base.paper.50}"
+    },
+    "on-bg": {
+      "$value": "{color.base.ink.900}"
+    },
+    "surface": {
+      "$value": "{color.base.paper.100}"
+    },
+    "on-surface": {
+      "$value": "{color.base.ink.900}"
+    },
+    "muted": {
+      "$value": "{color.base.paper.200}"
+    },
+    "on-muted": {
+      "$value": "{color.base.ink.700}"
+    },
+    "action": {
+      "$value": "{color.base.green.700}"
+    },
+    "on-action": {
+      "$value": "{color.base.paper.50}"
+    },
+    "accent": {
+      "$value": "{color.base.ochre.400}"
+    },
+    "on-accent": {
+      "$value": "{color.base.ink.900}"
+    },
+    "danger": {
+      "$value": "{color.base.red.700}"
+    },
+    "on-danger": {
+      "$value": "{color.base.paper.50}"
+    },
+    "border": {
+      "$value": "{color.base.ink.600}"
+    },
+    "focus": {
+      "$value": "{color.base.green.600}"
+    }
+  },
+  "font": {
+    "$type": "fontFamily",
+    "display": {
+      "$value": [
+        "system-ui",
+        "sans-serif"
+      ],
+      "$description": "Placeholder: choose a licensed display face; check accents (é è ê à ç œ « »), Latin Extended (ɛ ɔ ŋ) and tone marks for Cameroonian names"
+    },
+    "body": {
+      "$value": [
+        "system-ui",
+        "sans-serif"
+      ],
+      "$description": "Placeholder: a readable text face with the same glyph coverage"
+    },
+    "mono": {
+      "$value": [
+        "ui-monospace",
+        "monospace"
+      ]
+    }
+  },
+  "font-weight": {
+    "$type": "fontWeight",
+    "regular": {
+      "$value": 400
+    },
+    "medium": {
+      "$value": 500
+    },
+    "bold": {
+      "$value": 700
+    }
+  },
+  "text": {
+    "$type": "dimension",
+    "$description": "Type scale (ratio ~1.25 from 1rem). Line length 45–90 characters for body text",
+    "sm": {
+      "$value": {
+        "value": 0.875,
+        "unit": "rem"
+      }
+    },
+    "base": {
+      "$value": {
+        "value": 1,
+        "unit": "rem"
+      }
+    },
+    "lg": {
+      "$value": {
+        "value": 1.25,
+        "unit": "rem"
+      }
+    },
+    "xl": {
+      "$value": {
+        "value": 1.563,
+        "unit": "rem"
+      }
+    },
+    "2xl": {
+      "$value": {
+        "value": 1.953,
+        "unit": "rem"
+      }
+    },
+    "3xl": {
+      "$value": {
+        "value": 2.441,
+        "unit": "rem"
+      }
+    }
+  },
+  "leading": {
+    "$type": "number",
+    "tight": {
+      "$value": 1.2
+    },
+    "body": {
+      "$value": 1.5
+    }
+  },
+  "spacing": {
+    "$type": "dimension",
+    "$description": "4px grid",
+    "1": {
+      "$value": {
+        "value": 0.25,
+        "unit": "rem"
+      }
+    },
+    "2": {
+      "$value": {
+        "value": 0.5,
+        "unit": "rem"
+      }
+    },
+    "3": {
+      "$value": {
+        "value": 0.75,
+        "unit": "rem"
+      }
+    },
+    "4": {
+      "$value": {
+        "value": 1.0,
+        "unit": "rem"
+      }
+    },
+    "6": {
+      "$value": {
+        "value": 1.5,
+        "unit": "rem"
+      }
+    },
+    "8": {
+      "$value": {
+        "value": 2.0,
+        "unit": "rem"
+      }
+    },
+    "12": {
+      "$value": {
+        "value": 3.0,
+        "unit": "rem"
+      }
+    },
+    "16": {
+      "$value": {
+        "value": 4.0,
+        "unit": "rem"
+      }
+    }
+  },
+  "radius": {
+    "$type": "dimension",
+    "sm": {
+      "$value": {
+        "value": 2,
+        "unit": "px"
+      }
+    },
+    "md": {
+      "$value": {
+        "value": 6,
+        "unit": "px"
+      }
+    },
+    "lg": {
+      "$value": {
+        "value": 12,
+        "unit": "px"
+      }
+    }
+  },
+  "duration": {
+    "$type": "duration",
+    "$description": "UI motion 100–500 ms; feedback ~100 ms; disable movement under prefers-reduced-motion",
+    "fast": {
+      "$value": {
+        "value": 120,
+        "unit": "ms"
+      }
+    },
+    "base": {
+      "$value": {
+        "value": 200,
+        "unit": "ms"
+      }
+    },
+    "slow": {
+      "$value": {
+        "value": 320,
+        "unit": "ms"
+      }
+    }
+  },
+  "ease": {
+    "$type": "cubicBezier",
+    "standard": {
+      "$value": [
+        0.2,
+        0,
+        0,
+        1
+      ]
+    },
+    "out": {
+      "$value": [
+        0,
+        0,
+        0.2,
+        1
+      ]
+    }
+  },
+  "shadow": {
+    "$type": "shadow",
+    "raised": {
+      "$value": {
+        "color": {
+          "colorSpace": "oklch",
+          "components": [
+            0.22,
+            0.02,
+            250
+          ],
+          "alpha": 0.18
+        },
+        "offsetX": {
+          "value": 0,
+          "unit": "px"
+        },
+        "offsetY": {
+          "value": 2,
+          "unit": "px"
+        },
+        "blur": {
+          "value": 6,
+          "unit": "px"
+        },
+        "spread": {
+          "value": 0,
+          "unit": "px"
+        }
+      }
+    }
+  }
+}

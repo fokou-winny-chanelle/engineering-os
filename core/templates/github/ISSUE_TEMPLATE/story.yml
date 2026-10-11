@@ -1,0 +1,31 @@
+name: Story
+description: A thin vertical slice of user value with testable acceptance criteria
+labels: ["story"]
+body:
+  - type: textarea
+    id: story
+    attributes:
+      label: Story
+      description: As a <who>, I want <what>, so that <why>.
+    validations:
+      required: true
+  - type: textarea
+    id: ac
+    attributes:
+      label: Acceptance criteria
+      description: Numbered, testable, Given/When/Then. Ids (AC-1, AC-2) are referenced by tests and the PR.
+      value: |
+        AC-1: Given ... When ... Then ...
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Out of scope, edge cases, links to PRD / architecture / ADRs / designs.
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk area
+      multiple: true
+      options: [none, money, auth/permissions, PII, migration, public API, infra]

@@ -1,0 +1,32 @@
+{
+ "version": 1,
+ "about": "Opt-in design studio (eos studio). Knowledge sources are copied into a project's .eos/studio/ only after human sign-off; code runs only in the sandbox. Hashes reviewed 2026-10-10 (docs/research/v0.7-design-studio.md).",
+ "knowledge": ["impeccable-knowledge", "ui-ux-pro-max-knowledge", "emil-review-animations"],
+ "image": "python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170",
+ "tools": {
+  "impeccable": {
+   "kind": "binary",
+   "knowledge": "impeccable-knowledge",
+   "skill_dir": "skill",
+   "version": "0.1.14",
+   "release": "https://github.com/pbakaus/impeccable/releases/download/engine-v0.1.14",
+   "assets": {
+    "linux-x64": {"name": "impeccable-linux-x64", "sha256": "3d31ec1a664ac35c815ea1d7c10abad1155ce364d0f461157eb837a34368efb6"},
+    "linux-arm64": {"name": "impeccable-linux-arm64", "sha256": "396263ee694780db942483fc80933a012ef08bf981f5f26b0da5e16b6208c948"},
+    "darwin-arm64": {"name": "impeccable-darwin-arm64", "sha256": "abbd69d540532b91e9599c41d3a6127dfbaabae5e24bafd74ff7e2fb18f4f87c"},
+    "darwin-x64": {"name": "impeccable-darwin-x64", "sha256": "dfa4570309939f49615a441baa9c73f1c2d339bf07494517a6c6eb2eb28aa0f5"}
+   },
+   "verbs": ["detect", "help", "--help", "--version"],
+   "env": {"IMPECCABLE_NO_TELEMETRY": "1", "DO_NOT_TRACK": "1", "IMPECCABLE_NO_UPDATE_CHECK": "1", "IMPECCABLE_NO_STALENESS_CHECK": "1"}
+  },
+  "uupm": {
+   "kind": "python",
+   "code": "ui-ux-pro-max-scripts",
+   "knowledge": "ui-ux-pro-max-knowledge",
+   "scripts": "dot-claude/skills/ui-ux-pro-max/scripts",
+   "data": "dot-claude/skills/ui-ux-pro-max/data",
+   "verbs": ["search"],
+   "env": {"PYTHONDONTWRITEBYTECODE": "1"}
+  }
+ }
+}

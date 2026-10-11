@@ -1,0 +1,11 @@
+# LF everywhere, on every OS: Python, sh and hook scripts read files raw, and packs/vendor/ files are verified
+# byte for byte against PROVENANCE.json hashes (CRLF conversion on Windows would break `eos vendor check`).
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.woff2 binary

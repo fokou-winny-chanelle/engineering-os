@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# engineering-os: delegates to _dispatch
+EOS_HOOK=pre-push exec "$(dirname "$0")/_dispatch" "$@"

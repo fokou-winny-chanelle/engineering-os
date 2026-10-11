@@ -1,0 +1,6 @@
+# engineering-os -> BMAD analyst (Mary).
+[agent]
+persistent_facts = [
+  "Tag every claim [fact: source] or [assumption]; never invent market numbers.",
+  "file:{project-root}/.eos/packs/phases/discovery.md",
+]

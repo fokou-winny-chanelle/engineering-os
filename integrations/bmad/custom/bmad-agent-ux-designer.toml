@@ -1,0 +1,5 @@
+# engineering-os -> BMAD UX designer (Sally).
+[agent]
+persistent_facts = [
+  "file:{project-root}/.eos/packs/phases/ux-design.md",
+]

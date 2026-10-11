@@ -1,0 +1,744 @@
+{
+ "about": "Eval tasks for the LLM application library (stage 10). Same method as the other eval files: context coverage (pack vs pack+refs) is an availability proxy, not proof of better answers; rubric and refs share an author. Score real agent answers with --responses DIR.",
+ "tasks": [
+  {
+   "id": "llm-or-code",
+   "pack": "agent-security",
+   "refs": [
+    "llm/choosing-models"
+   ],
+   "prompt": "Should we use an LLM to compute VAT on invoices and to summarise customer complaints?",
+   "rubric": [
+    {
+     "id": "det",
+     "text": "deterministic code for calculations",
+     "any": [
+      "deterministic"
+     ]
+    },
+    {
+     "id": "criteria",
+     "text": "success criteria/evals before choosing",
+     "any": [
+      "success criteria|eval"
+     ]
+    },
+    {
+     "id": "cheap",
+     "text": "cheapest model tier that passes",
+     "any": [
+      "cheapest|smallest"
+     ]
+    },
+    {
+     "id": "pin",
+     "text": "pin model versions, avoid -latest",
+     "any": [
+      "pin|-latest"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "routing",
+   "pack": "agent-security",
+   "refs": [
+    "llm/choosing-models",
+    "llm/reliability-cost"
+   ],
+   "prompt": "Our support bot is too expensive on the flagship model. How do we cut cost without hurting quality?",
+   "rubric": [
+    {
+     "id": "route",
+     "text": "route easy requests to a smaller model",
+     "any": [
+      "rout"
+     ]
+    },
+    {
+     "id": "eval",
+     "text": "prove with evals",
+     "any": [
+      "eval"
+     ]
+    },
+    {
+     "id": "batch",
+     "text": "batch/flex for offline work",
+     "any": [
+      "[Bb]atch|[Ff]lex"
+     ]
+    },
+    {
+     "id": "cache",
+     "text": "prompt caching",
+     "any": [
+      "cach"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "prompt-files",
+   "pack": "agent-security",
+   "refs": [
+    "llm/prompts-structured-output"
+   ],
+   "prompt": "How should we store and change prompts in our repo?",
+   "rubric": [
+    {
+     "id": "files",
+     "text": "prompt files in the repo with frontmatter",
+     "any": [
+      "\\.prompt\\.md|frontmatter"
+     ]
+    },
+    {
+     "id": "version",
+     "text": "version bumped on every change",
+     "any": [
+      "version"
+     ]
+    },
+    {
+     "id": "evals",
+     "text": "linked eval set",
+     "any": [
+      "evals"
+     ]
+    },
+    {
+     "id": "check",
+     "text": "eos llm check enforces",
+     "any": [
+      "eos llm check"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "structured",
+   "pack": "agent-security",
+   "refs": [
+    "llm/prompts-structured-output"
+   ],
+   "prompt": "We parse JSON out of model replies with regex and it breaks. What should we do?",
+   "rubric": [
+    {
+     "id": "schema",
+     "text": "strict JSON schema structured outputs",
+     "any": [
+      "[Ss]tructured [Oo]utput|json_schema|strict"
+     ]
+    },
+    {
+     "id": "refusal",
+     "text": "handle refusals",
+     "any": [
+      "refus"
+     ]
+    },
+    {
+     "id": "trunc",
+     "text": "handle truncation/max tokens",
+     "any": [
+      "truncat|incomplete|max_output_tokens"
+     ]
+    },
+    {
+     "id": "validate",
+     "text": "validate in code (Pydantic)",
+     "any": [
+      "Pydantic|validat"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "untrusted-delim",
+   "pack": "agent-security",
+   "refs": [
+    "llm/prompts-structured-output",
+    "security/llm-agent-security"
+   ],
+   "prompt": "Users paste supplier emails into our prompt. Anything to watch?",
+   "rubric": [
+    {
+     "id": "tag",
+     "text": "wrap untrusted data in tags",
+     "any": [
+      "tag|<"
+     ]
+    },
+    {
+     "id": "inject",
+     "text": "prompt injection risk",
+     "any": [
+      "injection"
+     ]
+    },
+    {
+     "id": "notcontrol",
+     "text": "delimiting is not a security control alone",
+     "any": [
+      "trifecta|not a security|never depend"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "tool-design",
+   "pack": "agent-security",
+   "refs": [
+    "llm/tools-mcp"
+   ],
+   "prompt": "Design the tools for an agent that handles refunds for our shop.",
+   "rubric": [
+    {
+     "id": "few",
+     "text": "few task-shaped tools",
+     "any": [
+      "schedule_event|task-shaped|fewer than 20"
+     ]
+    },
+    {
+     "id": "session",
+     "text": "user/tenant from the session, not the model",
+     "any": [
+      "session"
+     ]
+    },
+    {
+     "id": "confirm",
+     "text": "user confirms irreversible actions",
+     "any": [
+      "confirm"
+     ]
+    },
+    {
+     "id": "idem",
+     "text": "idempotent writes",
+     "any": [
+      "idempot"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "mcp-server",
+   "pack": "agent-security",
+   "refs": [
+    "llm/tools-mcp"
+   ],
+   "prompt": "Customers want to use our invoicing product from Claude and ChatGPT. Should we build an MCP server, and what must it do?",
+   "rubric": [
+    {
+     "id": "when",
+     "text": "MCP for external AI clients",
+     "any": [
+      "MCP server"
+     ]
+    },
+    {
+     "id": "oauth",
+     "text": "OAuth 2.1 with resource indicators",
+     "any": [
+      "OAuth"
+     ]
+    },
+    {
+     "id": "passthrough",
+     "text": "no token passthrough",
+     "any": [
+      "transit|passthrough"
+     ]
+    },
+    {
+     "id": "origin",
+     "text": "validate Origin / bind localhost",
+     "any": [
+      "Origin|127\\.0\\.0\\.1"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "rag-basics",
+   "pack": "data-ml",
+   "refs": [
+    "llm/rag"
+   ],
+   "prompt": "We want our assistant to answer from 3,000 PDF policy documents in French and English.",
+   "rubric": [
+    {
+     "id": "hybrid",
+     "text": "hybrid search with RRF",
+     "any": [
+      "[Hh]ybrid|RRF|Reciprocal"
+     ]
+    },
+    {
+     "id": "rerank",
+     "text": "rerank top candidates",
+     "any": [
+      "rerank"
+     ]
+    },
+    {
+     "id": "cite",
+     "text": "citations verified",
+     "any": [
+      "citation|cite"
+     ]
+    },
+    {
+     "id": "eval",
+     "text": "retrieval eval recall@k",
+     "any": [
+      "recall@k|recall"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "rag-pgvector",
+   "pack": "data-ml",
+   "refs": [
+    "llm/rag",
+    "data/search-redis"
+   ],
+   "prompt": "Can we just use pgvector in our existing Postgres, with per-tenant filtering?",
+   "rubric": [
+    {
+     "id": "ok",
+     "text": "pgvector fits existing Postgres",
+     "any": [
+      "pgvector"
+     ]
+    },
+    {
+     "id": "hnsw",
+     "text": "HNSW vs IVFFlat",
+     "any": [
+      "HNSW"
+     ]
+    },
+    {
+     "id": "filter",
+     "text": "filtering after index scan / iterative scans",
+     "any": [
+      "iterative|after"
+     ]
+    },
+    {
+     "id": "tenant",
+     "text": "tenant filter inside the query",
+     "any": [
+      "tenant"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "rag-small-kb",
+   "pack": "agent-security",
+   "refs": [
+    "llm/rag"
+   ],
+   "prompt": "Our FAQ is 40 pages. Do we need a vector database?",
+   "rubric": [
+    {
+     "id": "longctx",
+     "text": "put it in the prompt with caching",
+     "any": [
+      "200,000|in the prompt|long context"
+     ]
+    },
+    {
+     "id": "cache",
+     "text": "prompt caching",
+     "any": [
+      "cach"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "workflow-vs-agent",
+   "pack": "agent-security",
+   "refs": [
+    "llm/agents-workflows"
+   ],
+   "prompt": "Should our loan pre-screening be an autonomous agent?",
+   "rubric": [
+    {
+     "id": "workflow",
+     "text": "prefer a workflow/predefined path",
+     "any": [
+      "workflow"
+     ]
+    },
+    {
+     "id": "hitl",
+     "text": "human review for decisions about people",
+     "any": [
+      "human"
+     ]
+    },
+    {
+     "id": "stop",
+     "text": "stop conditions and budgets",
+     "any": [
+      "max steps|max turns|budget|stop"
+     ]
+    },
+    {
+     "id": "persist",
+     "text": "persist and resume state",
+     "any": [
+      "resum|persist|durable"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "agent-loop",
+   "pack": "agent-security",
+   "refs": [
+    "llm/agents-workflows",
+    "llm/reliability-cost"
+   ],
+   "prompt": "Our agent sometimes loops for minutes and costs a lot. Fix it.",
+   "rubric": [
+    {
+     "id": "steps",
+     "text": "max steps",
+     "any": [
+      "max steps|MAX_STEPS|max_turns"
+     ]
+    },
+    {
+     "id": "money",
+     "text": "token/money caps",
+     "any": [
+      "cap|budget"
+     ]
+    },
+    {
+     "id": "loop",
+     "text": "loop detection",
+     "any": [
+      "loop"
+     ]
+    },
+    {
+     "id": "timeout",
+     "text": "timeouts",
+     "any": [
+      "timeout"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "eval-gate",
+   "pack": "agent-security",
+   "refs": [
+    "llm/evals-in-production",
+    "testing/llm-evals"
+   ],
+   "prompt": "How do we stop prompt changes from silently making answers worse?",
+   "rubric": [
+    {
+     "id": "gate",
+     "text": "eval regression gate in CI",
+     "any": [
+      "gate"
+     ]
+    },
+    {
+     "id": "threshold",
+     "text": "thresholds per language/tag",
+     "any": [
+      "threshold|min_by_tag|lang:fr"
+     ]
+    },
+    {
+     "id": "baseline",
+     "text": "baseline / max drop",
+     "any": [
+      "baseline|max_drop"
+     ]
+    },
+    {
+     "id": "safety",
+     "text": "safety slice 100%",
+     "any": [
+      "safety"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "judge",
+   "pack": "agent-security",
+   "refs": [
+    "llm/evals-in-production"
+   ],
+   "prompt": "Can we use an LLM to grade our chatbot's answers?",
+   "rubric": [
+    {
+     "id": "bias",
+     "text": "position/verbosity/self-enhancement bias",
+     "any": [
+      "position|verbosity|self-enhancement"
+     ]
+    },
+    {
+     "id": "calib",
+     "text": "calibrate against human labels",
+     "any": [
+      "human label|calibrat|agreement"
+     ]
+    },
+    {
+     "id": "swap",
+     "text": "swap order / pairwise / rubric",
+     "any": [
+      "swap|pairwise|rubric"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "otel",
+   "pack": "operations",
+   "refs": [
+    "llm/observability-otel"
+   ],
+   "prompt": "What should we trace for our LLM calls?",
+   "rubric": [
+    {
+     "id": "semconv",
+     "text": "OTel GenAI semantic conventions",
+     "any": [
+      "semantic conventions|gen_ai"
+     ]
+    },
+    {
+     "id": "tokens",
+     "text": "token usage attributes",
+     "any": [
+      "usage|tokens"
+     ]
+    },
+    {
+     "id": "content",
+     "text": "content capture off by default",
+     "any": [
+      "[Oo]pt-[Ii]n|off"
+     ]
+    },
+    {
+     "id": "version",
+     "text": "prompt name/version on spans",
+     "any": [
+      "prompt\\.version|prompt version"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cost-track",
+   "pack": "operations",
+   "refs": [
+    "llm/observability-otel",
+    "llm/reliability-cost"
+   ],
+   "prompt": "How do we know what each customer costs us in AI spend?",
+   "rubric": [
+    {
+     "id": "usage",
+     "text": "from reported usage",
+     "any": [
+      "usage"
+     ]
+    },
+    {
+     "id": "table",
+     "text": "dated price table, not hard-coded guesses",
+     "any": [
+      "dated|price table"
+     ]
+    },
+    {
+     "id": "tenant",
+     "text": "aggregate per tenant/feature",
+     "any": [
+      "tenant"
+     ]
+    },
+    {
+     "id": "quota",
+     "text": "quotas/caps",
+     "any": [
+      "quota|cap"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "timeouts",
+   "pack": "agent-security",
+   "refs": [
+    "llm/reliability-cost"
+   ],
+   "prompt": "Our API route calls OpenAI with default settings. Is that OK?",
+   "rubric": [
+    {
+     "id": "default",
+     "text": "SDK default 10-minute timeout",
+     "any": [
+      "10-minute|10 minutes"
+     ]
+    },
+    {
+     "id": "retry",
+     "text": "retry transient errors honouring Retry-After",
+     "any": [
+      "Retry-After"
+     ]
+    },
+    {
+     "id": "noretry",
+     "text": "don't retry spend-limit 429s",
+     "any": [
+      "spend limit|quota"
+     ]
+    },
+    {
+     "id": "maxtok",
+     "text": "set max tokens",
+     "any": [
+      "max_output_tokens|max_tokens"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "privacy",
+   "pack": "agent-security",
+   "refs": [
+    "llm/privacy-residency",
+    "security/privacy"
+   ],
+   "prompt": "We want to send customer chat transcripts from Cameroon to an AI provider.",
+   "rubric": [
+    {
+     "id": "transfer",
+     "text": "Cameroon law: transfer needs Authority authorization",
+     "any": [
+      "authoriz|Section 32"
+     ]
+    },
+    {
+     "id": "retention",
+     "text": "provider retention/training terms",
+     "any": [
+      "retention|train"
+     ]
+    },
+    {
+     "id": "freetier",
+     "text": "not on free/unpaid tiers",
+     "any": [
+      "[Uu]npaid|free tier"
+     ]
+    },
+    {
+     "id": "redact",
+     "text": "minimise and redact PII",
+     "any": [
+      "redact|minimi"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "multilingual",
+   "pack": "agent-security",
+   "refs": [
+    "llm/multilingual-channels"
+   ],
+   "prompt": "Launching a WhatsApp support bot in Cameroon in French, English and Pidgin.",
+   "rubric": [
+    {
+     "id": "perlang",
+     "text": "eval per language",
+     "any": [
+      "lang:fr|per language"
+     ]
+    },
+    {
+     "id": "gap",
+     "text": "local-language quality gap",
+     "any": [
+      "IrokoBench|gap"
+     ]
+    },
+    {
+     "id": "escalate",
+     "text": "WhatsApp requires human escalation",
+     "any": [
+      "escalation"
+     ]
+    },
+    {
+     "id": "general",
+     "text": "no general-purpose assistant on WhatsApp Business",
+     "any": [
+      "general-purpose"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "framework",
+   "pack": "agent-security",
+   "refs": [
+    "llm/frameworks"
+   ],
+   "prompt": "Which AI framework should we adopt for a Next.js chat feature and a Python document Q&A?",
+   "rubric": [
+    {
+     "id": "none",
+     "text": "start with provider SDK / none",
+     "any": [
+      "directly|no framework|thin module|none"
+     ]
+    },
+    {
+     "id": "aisdk",
+     "text": "AI SDK for Next.js streaming",
+     "any": [
+      "AI SDK"
+     ]
+    },
+    {
+     "id": "rag",
+     "text": "LlamaIndex or similar for RAG",
+     "any": [
+      "LlamaIndex"
+     ]
+    },
+    {
+     "id": "pin",
+     "text": "pin versions, check OTLP export",
+     "any": [
+      "pin|OTLP"
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,427 @@
+{
+ "date": "2026-10-11",
+ "machine": "engineering-os box (Linux x86_64, Python 3.13), same fixtures, versions interleaved",
+ "hooks": {
+  "v0.6.0": [
+   {
+    "eos": "0.6.0",
+    "rev": "79a42e6",
+    "runs": 15,
+    "guard_read_ms": [
+     42,
+     142
+    ],
+    "guard_edit_ms": [
+     44,
+     51
+    ],
+    "guard_shell_ms": [
+     48,
+     53
+    ],
+    "eos_check_ms": [
+     111,
+     121
+    ],
+    "commit_docs_typo_ms": [
+     399,
+     517
+    ],
+    "commit_py_change_ms": [
+     404,
+     419
+    ],
+    "stop_check_py_ms": [
+     411,
+     419
+    ]
+   },
+   {
+    "eos": "0.6.0",
+    "rev": "79a42e6",
+    "runs": 15,
+    "guard_read_ms": [
+     42,
+     110
+    ],
+    "guard_edit_ms": [
+     42,
+     53
+    ],
+    "guard_shell_ms": [
+     48,
+     57
+    ],
+    "eos_check_ms": [
+     108,
+     115
+    ],
+    "commit_docs_typo_ms": [
+     388,
+     409
+    ],
+    "commit_py_change_ms": [
+     401,
+     417
+    ],
+    "stop_check_py_ms": [
+     422,
+     437
+    ]
+   }
+  ],
+  "v0.7.0": [
+   {
+    "eos": "0.7.0",
+    "rev": "3786964",
+    "runs": 15,
+    "guard_read_ms": [
+     54,
+     222
+    ],
+    "guard_edit_ms": [
+     54,
+     64
+    ],
+    "guard_shell_ms": [
+     72,
+     101
+    ],
+    "eos_check_ms": [
+     195,
+     233
+    ],
+    "commit_docs_typo_ms": [
+     389,
+     400
+    ],
+    "commit_py_change_ms": [
+     396,
+     415
+    ],
+    "stop_check_py_ms": [
+     500,
+     749
+    ]
+   },
+   {
+    "eos": "0.7.0",
+    "rev": "3786964",
+    "runs": 15,
+    "guard_read_ms": [
+     54,
+     235
+    ],
+    "guard_edit_ms": [
+     54,
+     65
+    ],
+    "guard_shell_ms": [
+     60,
+     68
+    ],
+    "eos_check_ms": [
+     195,
+     198
+    ],
+    "commit_docs_typo_ms": [
+     376,
+     383
+    ],
+    "commit_py_change_ms": [
+     396,
+     406
+    ],
+    "stop_check_py_ms": [
+     494,
+     504
+    ]
+   }
+  ],
+  "v0.7.1": [
+   {
+    "eos": "0.7.0",
+    "rev": "f9a5161",
+    "runs": 15,
+    "guard_read_ms": [
+     40,
+     221
+    ],
+    "guard_edit_ms": [
+     42,
+     48
+    ],
+    "guard_shell_ms": [
+     46,
+     58
+    ],
+    "eos_check_ms": [
+     64,
+     64
+    ],
+    "commit_docs_typo_ms": [
+     390,
+     413
+    ],
+    "commit_py_change_ms": [
+     397,
+     407
+    ],
+    "stop_check_py_ms": [
+     343,
+     352
+    ]
+   },
+   {
+    "eos": "0.7.0",
+    "rev": "f9a5161",
+    "runs": 15,
+    "guard_read_ms": [
+     41,
+     213
+    ],
+    "guard_edit_ms": [
+     40,
+     47
+    ],
+    "guard_shell_ms": [
+     46,
+     64
+    ],
+    "eos_check_ms": [
+     66,
+     69
+    ],
+    "commit_docs_typo_ms": [
+     385,
+     398
+    ],
+    "commit_py_change_ms": [
+     381,
+     407
+    ],
+    "stop_check_py_ms": [
+     343,
+     349
+    ]
+   }
+  ]
+ },
+ "lanes": {
+  "v0.6.0": {
+   "eos": "0.6.0",
+   "rev": "79a42e6",
+   "runs": 5,
+   "fixture": "api/ 61 modules + 61 pytest tests, web/ Next.js stub, eos init --yes (all tools)",
+   "trivial_docs_typo": {
+    "lane_ms": [
+     114,
+     116
+    ],
+    "verify_ms": [
+     479,
+     484
+    ],
+    "verify_exit": 0,
+    "lane_line": "lane: trivial (docs, copy or assets only)",
+    "steps": [
+     "would run [.]: pre-commit run --color never --files docs/intro.md   # hooks on 1 changed file(s)"
+    ],
+    "verify_tail": "eos verify: OK in 0.4s"
+   },
+   "standard_py_change": {
+    "lane_ms": [
+     113,
+     118
+    ],
+    "verify_ms": [
+     638,
+     659
+    ],
+    "verify_exit": 0,
+    "lane_line": "lane: standard (1 file(s), 1 line(s), no sensitive paths)",
+    "steps": [
+     "would run [.]: pre-commit run --color never --files api/app/mod1.py   # hooks on 1 changed file(s)",
+     "would run [api]: /tmp/benchvenv/bin/python -m pytest -q tests/test_mod1.py   # related tests python [api] (1)"
+    ],
+    "verify_tail": "eos verify: OK in 0.5s"
+   },
+   "risky_payments_change": {
+    "lane_ms": [
+     114,
+     123
+    ],
+    "verify_ms": [
+     537,
+     607
+    ],
+    "verify_exit": 1,
+    "lane_line": "lane: risky (sensitive paths (1): api/app/payments/refund.py)",
+    "steps": [
+     "would run [.]: pre-commit run --color never --files api/app/__pycache__/__init__.cpython-313.pyc api/app/__pycache__/mod1.cpython-313.pyc api/app/payments/refund.py \u2026   # hooks on 4 changed file(s)",
+     "would run [api]: sh -c uv run ruff check . && uv run ruff format --check . && uv run mypy . && uv run pytest -q   # full check python [api]"
+    ],
+    "verify_tail": "eos verify: FAILED in 0.4s"
+   },
+   "eos_check_ms": [
+    118,
+    126
+   ],
+   "eos_next_ms": [
+    120,
+    132
+   ]
+  },
+  "v0.7.0": {
+   "eos": "0.7.0",
+   "rev": "3786964",
+   "runs": 5,
+   "fixture": "api/ 61 modules + 61 pytest tests, web/ Next.js stub, eos init --yes (all tools)",
+   "trivial_docs_typo": {
+    "lane_ms": [
+     202,
+     237
+    ],
+    "verify_ms": [
+     598,
+     616
+    ],
+    "verify_exit": 0,
+    "lane_line": "lane: trivial (docs, copy or assets only)",
+    "steps": [
+     "would run [.]: pre-commit run --color never --files docs/intro.md   # hooks on 1 changed file(s)"
+    ],
+    "verify_tail": "eos verify: OK in 0.4s"
+   },
+   "standard_py_change": {
+    "lane_ms": [
+     195,
+     198
+    ],
+    "verify_ms": [
+     717,
+     731
+    ],
+    "verify_exit": 0,
+    "lane_line": "lane: standard (1 file(s), 1 line(s), no sensitive paths)",
+    "steps": [
+     "would run [.]: pre-commit run --color never --files api/app/mod1.py   # hooks on 1 changed file(s)",
+     "would run [api]: /tmp/benchvenv/bin/python -m pytest -q tests/test_mod1.py   # related tests python [api] (1)"
+    ],
+    "verify_tail": "eos verify: OK in 0.5s"
+   },
+   "risky_payments_change": {
+    "lane_ms": [
+     186,
+     196
+    ],
+    "verify_ms": [
+     631,
+     652
+    ],
+    "verify_exit": 1,
+    "lane_line": "lane: risky (sensitive paths (1): api/app/payments/refund.py)",
+    "steps": [
+     "would run [.]: pre-commit run --color never --files api/app/__pycache__/__init__.cpython-313.pyc api/app/__pycache__/mod1.cpython-313.pyc api/app/payments/refund.py \u2026   # hooks on 4 changed file(s)",
+     "would run [api]: sh -c uv run ruff check . && uv run ruff format --check . && uv run mypy . && uv run pytest -q   # full check python [api]"
+    ],
+    "verify_tail": "eos verify: FAILED in 0.4s"
+   },
+   "eos_check_ms": [
+    202,
+    210
+   ],
+   "eos_next_ms": [
+    199,
+    206
+   ]
+  },
+  "v0.7.1": {
+   "eos": "0.7.0",
+   "rev": "f9a5161",
+   "runs": 5,
+   "fixture": "api/ 61 modules + 61 pytest tests, web/ Next.js stub, eos init --yes (all tools)",
+   "trivial_docs_typo": {
+    "lane_ms": [
+     65,
+     244
+    ],
+    "verify_ms": [
+     413,
+     423
+    ],
+    "verify_exit": 0,
+    "lane_line": "lane: trivial (docs, copy or assets only)",
+    "steps": [
+     "would run [.]: pre-commit run --color never --files docs/intro.md   # hooks on 1 changed file(s)"
+    ],
+    "verify_tail": "eos verify: OK in 0.3s"
+   },
+   "standard_py_change": {
+    "lane_ms": [
+     62,
+     65
+    ],
+    "verify_ms": [
+     599,
+     624
+    ],
+    "verify_exit": 0,
+    "lane_line": "lane: standard (1 file(s), 1 line(s), no sensitive paths)",
+    "steps": [
+     "would run [.]: pre-commit run --color never --files api/app/mod1.py   # hooks on 1 changed file(s)",
+     "would run [api]: /tmp/benchvenv/bin/python -m pytest -q tests/test_mod1.py   # related tests python [api] (1)"
+    ],
+    "verify_tail": "eos verify: OK in 0.5s"
+   },
+   "risky_payments_change": {
+    "lane_ms": [
+     59,
+     71
+    ],
+    "verify_ms": [
+     482,
+     513
+    ],
+    "verify_exit": 1,
+    "lane_line": "lane: risky (sensitive paths (1): api/app/payments/refund.py)",
+    "steps": [
+     "would run [.]: pre-commit run --color never --files api/app/__pycache__/__init__.cpython-313.pyc api/app/__pycache__/mod1.cpython-313.pyc api/app/payments/refund.py \u2026   # hooks on 4 changed file(s)",
+     "would run [api]: sh -c uv run ruff check . && uv run ruff format --check . && uv run mypy . && uv run pytest -q   # full check python [api]"
+    ],
+    "verify_tail": "eos verify: FAILED in 0.4s"
+   },
+   "eos_check_ms": [
+    66,
+    66
+   ],
+   "eos_next_ms": [
+    63,
+    71
+   ]
+  }
+ },
+ "mcp_schema_tokens": {
+  "method": "tests/bench/mcp_schema_tokens.py (name+description+compact inputSchema, chars/4)",
+  "postgres-mcp 0.3.0 (restricted, via eos mcp run)": {
+   "tools": 9,
+   "tokens": 1220
+  },
+  "@playwright/mcp 0.0.83 (eos flags)": {
+   "tools": 25,
+   "tokens": 4121
+  },
+  "chrome-devtools-mcp 1.10.1 (--headless --isolated)": {
+   "tools": 30,
+   "tokens": 5815
+  },
+  "github-mcp-server 2.0.2 repos --read-only": {
+   "tools": 13,
+   "tokens": 2898
+  },
+  "@upstash/context7-mcp 4.3.0": {
+   "tools": 2,
+   "tokens": 1209
+  }
+ }
+}

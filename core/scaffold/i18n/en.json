@@ -1,0 +1,17 @@
+{
+  "common": {
+    "save": "Save",
+    "saving": "Saving…",
+    "retry": "Try again",
+    "offline": "You are offline. Your data is kept."
+  },
+  "orders": {
+    "title": "Orders",
+    "count": "{count, plural, =0 {No orders} one {# order} other {# orders}}",
+    "total": "Total: {amount}"
+  },
+  "errors": {
+    "generic": "Something went wrong.",
+    "reference": "Reference: {code}"
+  }
+}

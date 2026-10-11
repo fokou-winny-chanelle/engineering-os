@@ -1,0 +1,17 @@
+{
+  "common": {
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "retry": "Réessayer",
+    "offline": "Vous êtes hors ligne. Vos données sont conservées."
+  },
+  "orders": {
+    "title": "Commandes",
+    "count": "{count, plural, =0 {Aucune commande} one {# commande} other {# commandes}}",
+    "total": "Total : {amount}"
+  },
+  "errors": {
+    "generic": "Une erreur est survenue.",
+    "reference": "Référence : {code}"
+  }
+}

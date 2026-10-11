@@ -1,0 +1,48 @@
+{
+  "$description": "Dark theme: overrides semantic colour roles only. Built to the .dark selector.",
+  "color": {
+    "$type": "color",
+    "bg": {
+      "$value": "{color.base.ink.950}"
+    },
+    "on-bg": {
+      "$value": "{color.base.paper.100}"
+    },
+    "surface": {
+      "$value": "{color.base.slate.800}"
+    },
+    "on-surface": {
+      "$value": "{color.base.paper.100}"
+    },
+    "muted": {
+      "$value": "{color.base.slate.800}"
+    },
+    "on-muted": {
+      "$value": "{color.base.slate.300}"
+    },
+    "action": {
+      "$value": "{color.base.green.400}"
+    },
+    "on-action": {
+      "$value": "{color.base.ink.950}"
+    },
+    "accent": {
+      "$value": "{color.base.ochre.400}"
+    },
+    "on-accent": {
+      "$value": "{color.base.ink.900}"
+    },
+    "danger": {
+      "$value": "{color.base.red.400}"
+    },
+    "on-danger": {
+      "$value": "{color.base.ink.950}"
+    },
+    "border": {
+      "$value": "{color.base.slate.300}"
+    },
+    "focus": {
+      "$value": "{color.base.green.400}"
+    }
+  }
+}

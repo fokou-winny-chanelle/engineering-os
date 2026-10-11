@@ -1,0 +1,34 @@
+#!/usr/bin/env sh
+# engineering-os global git hook dispatcher (enabled with `eos bootstrap --global-hooks`,
+# which sets `git config --global core.hooksPath <this dir>`).
+#  1. Always: a fast staged-secrets scan with gitleaks (if installed), in every repo, even without pre-commit.
+#  2. Then: the repo's own .pre-commit-config.yaml via `pre-commit hook-impl` (plain `pre-commit install`
+#     refuses to run when core.hooksPath is set, so we delegate to it here).
+#  3. Else: a legacy hook in .git/hooks/<name> if present (keeps old repos working).
+# Opt out per repo: `git config eos.hooks false`. Emergency bypass is a human decision: `git commit --no-verify`.
+set -eu
+hook=${EOS_HOOK:-$(basename "$0")}
+if [ "$(git config --bool eos.hooks 2>/dev/null || echo true)" = "false" ]; then exit 0; fi
+top=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+gitdir=$(git rev-parse --git-dir 2>/dev/null || echo .git)
+
+# (skipped when the repo's own pre-commit config already runs gitleaks: one scan per commit is enough)
+if [ "$hook" = "pre-commit" ] && command -v gitleaks >/dev/null 2>&1 \
+  && ! { command -v pre-commit >/dev/null 2>&1 && grep -qs "gitleaks" "$top/.pre-commit-config.yaml"; }; then
+  if ! gitleaks git --pre-commit --staged --redact --no-banner --exit-code 1 "$top" >/dev/null 2>&1; then
+    echo "eos: gitleaks found a possible secret in staged changes. Details:" >&2
+    gitleaks git --pre-commit --staged --redact --no-banner "$top" >&2 || true
+    exit 1
+  fi
+fi
+
+if [ -f "$top/.pre-commit-config.yaml" ] && command -v pre-commit >/dev/null 2>&1; then
+  exec pre-commit hook-impl --config="$top/.pre-commit-config.yaml" --hook-type="$hook" \
+    --hook-dir "$(cd "$(dirname "$0")" && pwd)" --skip-on-missing-config -- "$@"
+fi
+
+legacy="$gitdir/hooks/$hook"
+if [ -x "$legacy" ]; then
+  exec "$legacy" "$@"
+fi
+exit 0

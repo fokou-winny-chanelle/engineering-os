@@ -1,0 +1,12 @@
+# Contract for {{NAME}}. Change additively; breaking changes need a new version (see topology pack).
+openapi: 3.1.0
+info:
+  title: {{NAME}}
+  version: 0.1.0
+paths:
+  /healthz:
+    get:
+      summary: Liveness
+      responses:
+        "200":
+          description: OK

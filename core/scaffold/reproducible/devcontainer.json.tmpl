@@ -1,0 +1,14 @@
+{
+  "name": "{{PROJECT_NAME}}",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+{{DC_FEATURES}}
+  },
+  "postCreateCommand": "{{POST_CREATE}}",
+  "customizations": {
+    "vscode": {
+      "settings": {}
+    }
+  },
+  "remoteUser": "vscode"
+}

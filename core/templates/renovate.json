@@ -1,0 +1,12 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests", ":semanticCommits"],
+  "minimumReleaseAge": "3 days",
+  "dependencyDashboard": true,
+  "pre-commit": { "enabled": true },
+  "packageRules": [
+    { "matchUpdateTypes": ["minor", "patch"], "groupName": "non-major dependencies", "automerge": false },
+    { "matchUpdateTypes": ["major"], "dependencyDashboardApproval": true },
+    { "matchFileNames": [".eos/**"], "enabled": false }
+  ]
+}

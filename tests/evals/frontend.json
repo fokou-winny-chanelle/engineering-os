@@ -1,0 +1,688 @@
+{
+  "about": "Eval tasks for the frontend & web performance library (stage 7). Same method as the other eval files: context coverage (pack vs pack+refs) is an availability proxy, not proof of better answers; rubric and refs share an author. Score real agent answers with --responses DIR.",
+  "tasks": [
+    {
+      "id": "cache-default",
+      "pack": "frontend",
+      "refs": [
+        "frontend/nextjs-rendering-data"
+      ],
+      "prompt": "In our Next.js 16 app, is fetch() cached by default? How should we cache a product list that changes hourly?",
+      "rubric": [
+        {
+          "id": "uncached",
+          "text": "fetch is not cached by default",
+          "any": [
+            "not cached|uncached"
+          ]
+        },
+        {
+          "id": "usecache",
+          "text": "use the 'use cache' directive (Cache Components)",
+          "any": [
+            "use cache"
+          ]
+        },
+        {
+          "id": "life",
+          "text": "set a lifetime with cacheLife",
+          "any": [
+            "cacheLife"
+          ]
+        },
+        {
+          "id": "tag",
+          "text": "invalidate by tag after writes",
+          "any": [
+            "cacheTag|revalidateTag|updateTag"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "streaming-status",
+      "pack": "frontend",
+      "refs": [
+        "frontend/nextjs-rendering-data"
+      ],
+      "prompt": "We stream a product page with Suspense. If the product doesn't exist we call notFound() inside the streamed part. What status code does the client get?",
+      "rubric": [
+        {
+          "id": "200",
+          "text": "streaming has already committed a 200",
+          "any": [
+            "200"
+          ]
+        },
+        {
+          "id": "noindex",
+          "text": "notFound later only adds a noindex meta",
+          "any": [
+            "noindex"
+          ]
+        },
+        {
+          "id": "before",
+          "text": "check existence before the first Suspense boundary / in the shell",
+          "any": [
+            "before.{0,40}(stream|suspense|shell)|outside.{0,20}suspense"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "server-client",
+      "pack": "frontend",
+      "refs": [
+        "frontend/nextjs-rendering-data"
+      ],
+      "prompt": "Should our whole page be a Client Component since one button needs onClick?",
+      "rubric": [
+        {
+          "id": "leaf",
+          "text": "push 'use client' down to the interactive leaf",
+          "any": [
+            "lea(f|ves)|push.{0,20}down"
+          ]
+        },
+        {
+          "id": "props",
+          "text": "pass Server Components as children/props to client ones",
+          "any": [
+            "children"
+          ]
+        },
+        {
+          "id": "serializable",
+          "text": "props crossing the boundary must be serializable",
+          "any": [
+            "serializ"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "server-action-auth",
+      "pack": "frontend",
+      "refs": [
+        "frontend/nextjs-actions-routes"
+      ],
+      "prompt": "Our Server Action deletes an order. The page already checks the user is logged in. Is that enough?",
+      "rubric": [
+        {
+          "id": "public",
+          "text": "a Server Action is a public endpoint",
+          "any": [
+            "public (HTTP )?endpoint|POST endpoint|reachable"
+          ]
+        },
+        {
+          "id": "authz",
+          "text": "authenticate and authorize inside the action",
+          "any": [
+            "inside (the|every) action|in the action|each action"
+          ]
+        },
+        {
+          "id": "validate",
+          "text": "validate input with a schema",
+          "any": [
+            "zod|schema|safeParse"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "proxy-auth",
+      "pack": "frontend",
+      "refs": [
+        "frontend/nextjs-actions-routes"
+      ],
+      "prompt": "Can we do all authorization in proxy.ts (formerly middleware)?",
+      "rubric": [
+        {
+          "id": "no",
+          "text": "proxy is not the place for authorization alone",
+          "any": [
+            "not.{0,40}authori[sz]ation|alone for authori[sz]ation"
+          ]
+        },
+        {
+          "id": "cve",
+          "text": "CVE-2025-29927 middleware bypass",
+          "any": [
+            "CVE-2025-29927|29927"
+          ]
+        },
+        {
+          "id": "dal",
+          "text": "authorize next to the data (data access layer)",
+          "any": [
+            "data (access )?layer|\\bDAL\\b|close to the data"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "server-state",
+      "pack": "frontend",
+      "refs": [
+        "frontend/state-forms"
+      ],
+      "prompt": "Should we put API data in Zustand/Redux for our Next.js dashboard?",
+      "rubric": [
+        {
+          "id": "server",
+          "text": "server state belongs in a server-state cache (TanStack Query) or Server Components",
+          "any": [
+            "TanStack|React Query|server state"
+          ]
+        },
+        {
+          "id": "url",
+          "text": "filters/pagination in the URL",
+          "any": [
+            "URL|searchParams|nuqs"
+          ]
+        },
+        {
+          "id": "local",
+          "text": "keep local UI state local",
+          "any": [
+            "useState|local state"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shared-schema",
+      "pack": "frontend",
+      "refs": [
+        "frontend/state-forms"
+      ],
+      "prompt": "Our FastAPI backend uses Pydantic and the Next.js form uses zod. How do we keep validation in sync?",
+      "rubric": [
+        {
+          "id": "openapi",
+          "text": "generate from the OpenAPI schema",
+          "any": [
+            "OpenAPI"
+          ]
+        },
+        {
+          "id": "server",
+          "text": "the server re-validates; client validation is UX",
+          "any": [
+            "server.{0,40}(re-?validat|authorit|source of truth)|never trust"
+          ]
+        },
+        {
+          "id": "errors",
+          "text": "map field errors back to the form",
+          "any": [
+            "flattenError|fieldErrors|setError|field errors"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "design-tokens",
+      "pack": "frontend",
+      "refs": [
+        "frontend/design-system"
+      ],
+      "prompt": "How should we structure design tokens and button variants for our component library?",
+      "rubric": [
+        {
+          "id": "tiers",
+          "text": "primitive vs semantic tokens",
+          "any": [
+            "semantic"
+          ]
+        },
+        {
+          "id": "variants",
+          "text": "typed variants (cva or similar)",
+          "any": [
+            "cva|variants?"
+          ]
+        },
+        {
+          "id": "headless",
+          "text": "build on headless/accessible primitives",
+          "any": [
+            "headless|Radix|React Aria|Base UI"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a11y-modal",
+      "pack": "frontend",
+      "refs": [
+        "frontend/accessibility"
+      ],
+      "prompt": "Build an accessible modal dialog. What do we need?",
+      "rubric": [
+        {
+          "id": "focus",
+          "text": "move focus in and return it on close",
+          "any": [
+            "return focus|focus.{0,30}(back|return|restore)"
+          ]
+        },
+        {
+          "id": "escape",
+          "text": "Escape closes",
+          "any": [
+            "Escape|Esc"
+          ]
+        },
+        {
+          "id": "native",
+          "text": "prefer native <dialog> or a tested primitive",
+          "any": [
+            "<dialog>|showModal|native dialog|primitive"
+          ]
+        },
+        {
+          "id": "wcag22",
+          "text": "WCAG 2.2 AA: focus not obscured / target size",
+          "any": [
+            "2\\.4\\.11|2\\.5\\.8|Focus Not Obscured|target size"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "axe-limits",
+      "pack": "frontend",
+      "refs": [
+        "frontend/accessibility"
+      ],
+      "prompt": "Our axe tests are green. Are we WCAG 2.2 AA compliant?",
+      "rubric": [
+        {
+          "id": "partial",
+          "text": "automated tools find only part of issues",
+          "any": [
+            "57|not conformance|only (a )?part|partial"
+          ]
+        },
+        {
+          "id": "manual",
+          "text": "manual keyboard + screen reader testing",
+          "any": [
+            "screen reader|keyboard"
+          ]
+        },
+        {
+          "id": "tags",
+          "text": "include wcag22aa tags",
+          "any": [
+            "wcag22aa"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cwv-budget",
+      "pack": "frontend",
+      "refs": [
+        "frontend/web-vitals-budgets"
+      ],
+      "prompt": "What performance targets and budgets should we set for our web app in Cameroon, and how do we enforce them?",
+      "rubric": [
+        {
+          "id": "thresholds",
+          "text": "LCP 2.5 s, INP 200 ms, CLS 0.1 at p75",
+          "any": [
+            "2\\.5 ?s|2500"
+          ]
+        },
+        {
+          "id": "inp",
+          "text": "INP replaced FID / measure INP in the field",
+          "any": [
+            "INP"
+          ]
+        },
+        {
+          "id": "lhci",
+          "text": "Lighthouse CI assertions in CI",
+          "any": [
+            "Lighthouse CI|lhci"
+          ]
+        },
+        {
+          "id": "field",
+          "text": "lab vs field data",
+          "any": [
+            "field data|RUM|CrUX|useReportWebVitals"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "images-fonts",
+      "pack": "frontend",
+      "refs": [
+        "frontend/assets-bundles"
+      ],
+      "prompt": "How should we load the hero image and our brand font in Next.js?",
+      "rubric": [
+        {
+          "id": "image",
+          "text": "next/image with sizes",
+          "any": [
+            "next/image"
+          ]
+        },
+        {
+          "id": "eager",
+          "text": "hero: loading eager / fetchPriority high (not lazy)",
+          "any": [
+            "fetchPriority|eager"
+          ]
+        },
+        {
+          "id": "font",
+          "text": "next/font self-hosts, no layout shift",
+          "any": [
+            "next/font"
+          ]
+        },
+        {
+          "id": "sizes",
+          "text": "set sizes for responsive images",
+          "any": [
+            "\\bsizes\\b"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bundle",
+      "pack": "frontend",
+      "refs": [
+        "frontend/assets-bundles"
+      ],
+      "prompt": "Our JS bundle keeps growing. How do we find and stop the growth?",
+      "rubric": [
+        {
+          "id": "analyze",
+          "text": "next analyze / bundle analyzer",
+          "any": [
+            "next analyze|analy[sz]er"
+          ]
+        },
+        {
+          "id": "split",
+          "text": "dynamic import for heavy client-only parts",
+          "any": [
+            "dynamic\\(|next/dynamic|import\\("
+          ]
+        },
+        {
+          "id": "ratchet",
+          "text": "a size ratchet in CI (eos bundle-size)",
+          "any": [
+            "bundle-size|ratchet"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rendering-choice",
+      "pack": "frontend",
+      "refs": [
+        "frontend/nextjs-rendering-data"
+      ],
+      "prompt": "Marketing pages, a logged-in dashboard and a product catalogue: which rendering strategy for each?",
+      "rubric": [
+        {
+          "id": "static",
+          "text": "static/prerendered for marketing",
+          "any": [
+            "static|prerender"
+          ]
+        },
+        {
+          "id": "dynamic",
+          "text": "dynamic/per-request for personalised",
+          "any": [
+            "dynamic|per[- ]request|request time"
+          ]
+        },
+        {
+          "id": "ppr",
+          "text": "partial prerendering / Cache Components shell",
+          "any": [
+            "PPR|partial prerender|static shell"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "xaf-format",
+      "pack": "frontend",
+      "refs": [
+        "frontend/i18n-l10n"
+      ],
+      "prompt": "How do we display prices in XAF for French and English users in Cameroon?",
+      "rubric": [
+        {
+          "id": "intl",
+          "text": "use Intl.NumberFormat with fr-CM / en-CM",
+          "any": [
+            "Intl\\.NumberFormat|fr-CM"
+          ]
+        },
+        {
+          "id": "nominor",
+          "text": "XAF has no decimals",
+          "any": [
+            "no (minor|decimal)|0 decimals|exponent 0|whole francs"
+          ]
+        },
+        {
+          "id": "nnbsp",
+          "text": "French uses narrow no-break spaces (tests must not use plain spaces)",
+          "any": [
+            "U\\+202F|202F|narrow no-break"
+          ]
+        },
+        {
+          "id": "tz",
+          "text": "show times in Africa/Douala explicitly",
+          "any": [
+            "Africa/Douala"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "i18n-plurals",
+      "pack": "frontend",
+      "refs": [
+        "frontend/i18n-l10n"
+      ],
+      "prompt": "How should we handle plurals and text length in French vs English UI strings?",
+      "rubric": [
+        {
+          "id": "icu",
+          "text": "ICU plural messages, not string concatenation",
+          "any": [
+            "ICU|plural"
+          ]
+        },
+        {
+          "id": "frrule",
+          "text": "French 0 and 1 are 'one'",
+          "any": [
+            "0.{0,20}one|zero.{0,30}singular"
+          ]
+        },
+        {
+          "id": "expansion",
+          "text": "French text is longer; design for expansion",
+          "any": [
+            "longer|expan|2\\.6"
+          ]
+        },
+        {
+          "id": "check",
+          "text": "eos i18n check for missing keys",
+          "any": [
+            "i18n check"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "csp-token",
+      "pack": "frontend",
+      "refs": [
+        "frontend/web-security"
+      ],
+      "prompt": "Where should our Next.js app store the access token, and do we need a CSP?",
+      "rubric": [
+        {
+          "id": "cookie",
+          "text": "HttpOnly Secure SameSite cookie, not localStorage",
+          "any": [
+            "HttpOnly"
+          ]
+        },
+        {
+          "id": "xss",
+          "text": "localStorage is readable by any XSS",
+          "any": [
+            "XSS"
+          ]
+        },
+        {
+          "id": "nonce",
+          "text": "nonce-based strict CSP via proxy",
+          "any": [
+            "nonce"
+          ]
+        },
+        {
+          "id": "reportonly",
+          "text": "start in Report-Only",
+          "any": [
+            "Report-Only"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "error-boundary",
+      "pack": "frontend",
+      "refs": [
+        "frontend/errors-observability"
+      ],
+      "prompt": "How should we handle and report errors in our Next.js App Router app?",
+      "rubric": [
+        {
+          "id": "errortsx",
+          "text": "error.tsx boundaries per segment",
+          "any": [
+            "error\\.tsx"
+          ]
+        },
+        {
+          "id": "global",
+          "text": "global-error for the root layout",
+          "any": [
+            "global-error"
+          ]
+        },
+        {
+          "id": "digest",
+          "text": "production hides Server Component messages; use the digest",
+          "any": [
+            "digest"
+          ]
+        },
+        {
+          "id": "sourcemaps",
+          "text": "upload source maps privately",
+          "any": [
+            "source ?maps?"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "low-bandwidth",
+      "pack": "frontend",
+      "refs": [
+        "frontend/low-bandwidth"
+      ],
+      "prompt": "Many of our users in Cameroon are on cheap Android phones and expensive mobile data. What should we do?",
+      "rubric": [
+        {
+          "id": "budget",
+          "text": "small JS budget for low-end devices",
+          "any": [
+            "budget|low-end"
+          ]
+        },
+        {
+          "id": "savedata",
+          "text": "respect Save-Data / data saver",
+          "any": [
+            "Save-Data|data saver|saveData"
+          ]
+        },
+        {
+          "id": "offline",
+          "text": "offline / service worker for key flows",
+          "any": [
+            "offline|service worker|Serwist"
+          ]
+        },
+        {
+          "id": "retry",
+          "text": "forms survive flaky networks (idempotency, keep input)",
+          "any": [
+            "idempoten|keep.{0,20}input|retry"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rn-web",
+      "pack": "frontend",
+      "refs": [
+        "frontend/react-native-web"
+      ],
+      "prompt": "We have an Expo app. Should we share code with our Next.js website via React Native Web?",
+      "rubric": [
+        {
+          "id": "share",
+          "text": "share logic/hooks/types, not necessarily UI",
+          "any": [
+            "logic|hooks|types"
+          ]
+        },
+        {
+          "id": "semantics",
+          "text": "RNW maps role to HTML; check semantics/SEO",
+          "any": [
+            "role|semantic"
+          ]
+        },
+        {
+          "id": "dom",
+          "text": "Expo DOM components option",
+          "any": [
+            "use dom|DOM components"
+          ]
+        }
+      ]
+    }
+  ]
+}

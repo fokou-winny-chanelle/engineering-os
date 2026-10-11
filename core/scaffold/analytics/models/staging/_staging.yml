@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: stg_payments
+    description: One row per payment attempt (synthetic seed data).
+    columns:
+      - name: payment_id
+        data_tests: [unique, not_null]
+      - name: merchant_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_merchants')
+                field: merchant_id
+      - name: amount_xaf
+        description: Integer XAF; XAF has no minor unit in use.
+        data_tests: [not_null]
+      - name: status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["succeeded", "failed", "refunded"]
+  - name: stg_merchants
+    columns:
+      - name: merchant_id
+        data_tests: [unique, not_null]

@@ -1,0 +1,674 @@
+{
+  "about": "Eval tasks for the data library (stage 3). Same method as architecture.json and security.json: context coverage (pack vs pack+refs) is an availability proxy, not proof of better answers; rubric and refs share an author. Score real agent answers with --responses DIR.",
+  "tasks": [
+    {
+      "id": "add-not-null-column",
+      "pack": "data-modeling",
+      "refs": [
+        "data/migrations",
+        "data/postgres-concurrency"
+      ],
+      "prompt": "Add a required `country_code` column to our 40-million-row `customers` table in Postgres without downtime.",
+      "rubric": [
+        {
+          "id": "expand",
+          "text": "expand/contract across releases",
+          "any": [
+            "expand.{0,20}contract"
+          ]
+        },
+        {
+          "id": "nullable",
+          "text": "add nullable first, backfill in batches",
+          "any": [
+            "batch"
+          ]
+        },
+        {
+          "id": "notvalid",
+          "text": "CHECK (... IS NOT NULL) NOT VALID, then VALIDATE, then SET NOT NULL uses it",
+          "any": [
+            "NOT VALID"
+          ]
+        },
+        {
+          "id": "validate-lock",
+          "text": "VALIDATE takes a weaker lock (SHARE UPDATE EXCLUSIVE)",
+          "any": [
+            "SHARE UPDATE EXCLUSIVE"
+          ]
+        },
+        {
+          "id": "lock-timeout",
+          "text": "set lock_timeout so a blocked ALTER does not queue everyone",
+          "any": [
+            "lock_timeout"
+          ]
+        },
+        {
+          "id": "queue",
+          "text": "lock queue: waiting ACCESS EXCLUSIVE blocks later readers",
+          "any": [
+            "queue"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "concurrent-index",
+      "pack": "data-modeling",
+      "refs": [
+        "data/migrations",
+        "data/postgres-indexing"
+      ],
+      "prompt": "Write an Alembic migration that adds an index on orders(customer_id, created_at).",
+      "rubric": [
+        {
+          "id": "concurrently",
+          "text": "CREATE INDEX CONCURRENTLY",
+          "any": [
+            "CONCURRENTLY"
+          ]
+        },
+        {
+          "id": "autocommit",
+          "text": "outside a transaction: autocommit_block in Alembic",
+          "any": [
+            "autocommit_block"
+          ]
+        },
+        {
+          "id": "invalid",
+          "text": "a failed concurrent build leaves an INVALID index to drop and retry",
+          "any": [
+            "INVALID|indisvalid"
+          ]
+        },
+        {
+          "id": "order",
+          "text": "equality column first, range/sort column second",
+          "any": [
+            "equality.{0,40}(first|before|then)|leading column"
+          ]
+        },
+        {
+          "id": "squawk",
+          "text": "lint the generated SQL (alembic --sql + squawk)",
+          "any": [
+            "squawk"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "money-schema",
+      "pack": "data-modeling",
+      "refs": [
+        "data/keys-money-time"
+      ],
+      "prompt": "Design the tables for a mobile-money wallet (XAF and EUR) with deposits, transfers and fees.",
+      "rubric": [
+        {
+          "id": "minor",
+          "text": "integer minor units (bigint) or numeric, never float",
+          "any": [
+            "minor units"
+          ]
+        },
+        {
+          "id": "currency",
+          "text": "store the currency code with every amount",
+          "any": [
+            "currency (code|column)|ISO 4217"
+          ]
+        },
+        {
+          "id": "xaf",
+          "text": "XAF has zero decimal places",
+          "any": [
+            "XAF"
+          ]
+        },
+        {
+          "id": "ledger",
+          "text": "append-only double-entry ledger entries that sum to zero",
+          "any": [
+            "double-entry"
+          ]
+        },
+        {
+          "id": "balance",
+          "text": "balance derived or cached with a check, not the source of truth",
+          "any": [
+            "derived|reconcil"
+          ]
+        },
+        {
+          "id": "idem",
+          "text": "idempotency key unique per request",
+          "any": [
+            "idempotency"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ids-choice",
+      "pack": "data-modeling",
+      "refs": [
+        "data/keys-money-time"
+      ],
+      "prompt": "Should our new Postgres tables use serial ids, UUIDv4, UUIDv7 or ULIDs?",
+      "rubric": [
+        {
+          "id": "identity",
+          "text": "bigint GENERATED ... AS IDENTITY rather than serial",
+          "any": [
+            "IDENTITY"
+          ]
+        },
+        {
+          "id": "v7",
+          "text": "UUIDv7 is time-ordered, good index locality",
+          "any": [
+            "UUIDv7|uuidv7"
+          ]
+        },
+        {
+          "id": "pg18",
+          "text": "PostgreSQL 18 has uuidv7()",
+          "any": [
+            "uuidv7\\(\\)"
+          ]
+        },
+        {
+          "id": "leak",
+          "text": "v7 embeds creation time; don't expose where that leaks information",
+          "any": [
+            "timestamp|creation time"
+          ]
+        },
+        {
+          "id": "v4-random",
+          "text": "UUIDv4 random inserts scatter the B-tree",
+          "any": [
+            "random"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "multi-tenant",
+      "pack": "data-modeling",
+      "refs": [
+        "data/multi-tenancy"
+      ],
+      "prompt": "We are turning our single-company app into SaaS for many schools. How should we separate tenant data in Postgres?",
+      "rubric": [
+        {
+          "id": "shared",
+          "text": "shared tables with tenant_id as the default",
+          "any": [
+            "tenant_id"
+          ]
+        },
+        {
+          "id": "rls",
+          "text": "row-level security as a backstop",
+          "any": [
+            "row-level security|RLS"
+          ]
+        },
+        {
+          "id": "owner",
+          "text": "table owners and BYPASSRLS roles skip policies; use FORCE or a non-owner role",
+          "any": [
+            "BYPASSRLS|FORCE ROW LEVEL"
+          ]
+        },
+        {
+          "id": "pool",
+          "text": "set the tenant per transaction (SET LOCAL / set_config(..., true)) with pooling",
+          "any": [
+            "SET LOCAL|set_config"
+          ]
+        },
+        {
+          "id": "composite",
+          "text": "tenant_id leading in composite keys/indexes",
+          "any": [
+            "composite|leading"
+          ]
+        },
+        {
+          "id": "schema",
+          "text": "schema- or database-per-tenant trade-offs",
+          "any": [
+            "schema-per-tenant|database-per-tenant|schema per tenant"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "slow-query",
+      "pack": "performance-scale",
+      "refs": [
+        "data/postgres-queries",
+        "data/postgres-indexing"
+      ],
+      "prompt": "This orders list endpoint takes 4 seconds in production. Here is the query. Make it fast.",
+      "rubric": [
+        {
+          "id": "explain",
+          "text": "EXPLAIN (ANALYZE, BUFFERS) on production-like data",
+          "any": [
+            "BUFFERS"
+          ]
+        },
+        {
+          "id": "estimates",
+          "text": "compare estimated vs actual rows",
+          "any": [
+            "estimat"
+          ]
+        },
+        {
+          "id": "keyset",
+          "text": "keyset pagination instead of large OFFSET",
+          "any": [
+            "keyset"
+          ]
+        },
+        {
+          "id": "stats",
+          "text": "pg_stat_statements to find the worst queries",
+          "any": [
+            "pg_stat_statements"
+          ]
+        },
+        {
+          "id": "nplus1",
+          "text": "check for N+1 from the ORM",
+          "any": [
+            "N\\+1"
+          ]
+        },
+        {
+          "id": "partial",
+          "text": "partial or covering index when it fits",
+          "any": [
+            "partial|INCLUDE|covering"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "double-booking",
+      "pack": "backend",
+      "refs": [
+        "data/postgres-concurrency"
+      ],
+      "prompt": "Two staff members sometimes book the same room for overlapping times. Fix it in the database.",
+      "rubric": [
+        {
+          "id": "exclusion",
+          "text": "exclusion constraint on a range (btree_gist) or WITHOUT OVERLAPS",
+          "any": [
+            "EXCLUDE|exclusion|WITHOUT OVERLAPS"
+          ]
+        },
+        {
+          "id": "anomaly",
+          "text": "check-then-insert is a race (write skew) under READ COMMITTED",
+          "any": [
+            "write skew|lost update"
+          ]
+        },
+        {
+          "id": "serializable",
+          "text": "SERIALIZABLE needs retry on 40001",
+          "any": [
+            "40001"
+          ]
+        },
+        {
+          "id": "for-update",
+          "text": "SELECT ... FOR UPDATE locks only existing rows",
+          "any": [
+            "FOR UPDATE"
+          ]
+        },
+        {
+          "id": "retry",
+          "text": "retry loop for serialization/deadlock errors",
+          "any": [
+            "retry"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bloat-vacuum",
+      "pack": "operations",
+      "refs": [
+        "data/postgres-concurrency",
+        "data/postgres-operations"
+      ],
+      "prompt": "Our Postgres disk keeps growing although row counts are stable, and queries got slower. What is going on and what do we do?",
+      "rubric": [
+        {
+          "id": "mvcc",
+          "text": "MVCC dead tuples need vacuum",
+          "any": [
+            "dead tuple|MVCC"
+          ]
+        },
+        {
+          "id": "long-tx",
+          "text": "long-running or idle-in-transaction sessions block cleanup",
+          "any": [
+            "idle in transaction|idle_in_transaction"
+          ]
+        },
+        {
+          "id": "autovac",
+          "text": "autovacuum scale factor / per-table tuning",
+          "any": [
+            "scale_factor"
+          ]
+        },
+        {
+          "id": "wrap",
+          "text": "transaction ID wraparound risk",
+          "any": [
+            "wraparound"
+          ]
+        },
+        {
+          "id": "full",
+          "text": "VACUUM FULL takes ACCESS EXCLUSIVE; prefer pg_repack-style tools",
+          "any": [
+            "VACUUM FULL"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pooling",
+      "pack": "infra-devops",
+      "refs": [
+        "data/postgres-operations"
+      ],
+      "prompt": "We get 'too many clients already' errors after scaling our API to 30 containers. Fix the database connections.",
+      "rubric": [
+        {
+          "id": "pgbouncer",
+          "text": "PgBouncer (or a managed pooler) in transaction mode",
+          "any": [
+            "PgBouncer"
+          ]
+        },
+        {
+          "id": "max-conn",
+          "text": "max_connections default is typically 100",
+          "any": [
+            "max_connections"
+          ]
+        },
+        {
+          "id": "session-state",
+          "text": "transaction mode breaks session state (SET, advisory locks, LISTEN)",
+          "any": [
+            "advisory|LISTEN|session state"
+          ]
+        },
+        {
+          "id": "prepared",
+          "text": "prepared statements need PgBouncer 1.21+ max_prepared_statements",
+          "any": [
+            "max_prepared_statements"
+          ]
+        },
+        {
+          "id": "pool-math",
+          "text": "size app pools so containers x pool fits the server",
+          "any": [
+            "pool size|pool_size"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "backups",
+      "pack": "operations",
+      "refs": [
+        "data/postgres-operations"
+      ],
+      "prompt": "Set up backups for our production Postgres so we can recover from someone deleting a table.",
+      "rubric": [
+        {
+          "id": "pitr",
+          "text": "base backup + WAL archiving for point-in-time recovery",
+          "any": [
+            "PITR|point-in-time"
+          ]
+        },
+        {
+          "id": "dump",
+          "text": "pg_dump alone is a snapshot, not PITR",
+          "any": [
+            "pg_dump"
+          ]
+        },
+        {
+          "id": "restore-test",
+          "text": "test restores regularly",
+          "any": [
+            "restore (test|drill)|test (the )?restore"
+          ]
+        },
+        {
+          "id": "replica",
+          "text": "a replica is not a backup (replicates the DROP)",
+          "any": [
+            "replica"
+          ]
+        },
+        {
+          "id": "rpo",
+          "text": "RPO/RTO targets",
+          "any": [
+            "RPO|RTO"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orm-pitfalls",
+      "pack": "backend",
+      "refs": [
+        "data/orm-sql-testing"
+      ],
+      "prompt": "Review this SQLAlchemy 2 FastAPI service: list endpoints are slow and tests use SQLite.",
+      "rubric": [
+        {
+          "id": "eager",
+          "text": "selectinload/joinedload to fix N+1",
+          "any": [
+            "selectinload|joinedload"
+          ]
+        },
+        {
+          "id": "raise",
+          "text": "lazy='raise' to catch accidental lazy loads",
+          "any": [
+            "raiseload|lazy=.raise"
+          ]
+        },
+        {
+          "id": "sqlite",
+          "text": "test against real Postgres (testcontainers), not SQLite",
+          "any": [
+            "testcontainers|real Postgres"
+          ]
+        },
+        {
+          "id": "expire",
+          "text": "expire_on_commit / async session pitfalls",
+          "any": [
+            "expire_on_commit"
+          ]
+        },
+        {
+          "id": "factories",
+          "text": "factories over shared fixtures; never production data",
+          "any": [
+            "factory|factories"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cache-search",
+      "pack": "backend",
+      "refs": [
+        "data/search-redis"
+      ],
+      "prompt": "Add product search with typo tolerance and cache popular product pages in Redis.",
+      "rubric": [
+        {
+          "id": "fts",
+          "text": "Postgres FTS (tsvector + GIN) first; dedicated engine when relevance/typos/facets demand it",
+          "any": [
+            "tsvector"
+          ]
+        },
+        {
+          "id": "trgm",
+          "text": "pg_trgm for typo-tolerant similarity",
+          "any": [
+            "pg_trgm"
+          ]
+        },
+        {
+          "id": "ttl",
+          "text": "TTL on every cache key",
+          "any": [
+            "TTL"
+          ]
+        },
+        {
+          "id": "eviction",
+          "text": "set maxmemory-policy (default noeviction)",
+          "any": [
+            "noeviction|maxmemory"
+          ]
+        },
+        {
+          "id": "invalidate",
+          "text": "invalidate on write / stampede protection",
+          "any": [
+            "stampede|invalidat"
+          ]
+        },
+        {
+          "id": "not-db",
+          "text": "Redis is not the system of record",
+          "any": [
+            "system of record|source of truth"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "erasure",
+      "pack": "data-modeling",
+      "refs": [
+        "data/history-retention"
+      ],
+      "prompt": "A user asked us to delete their account and data. We use soft delete everywhere. What should happen?",
+      "rubric": [
+        {
+          "id": "soft-not-erasure",
+          "text": "soft delete is not erasure",
+          "any": [
+            "soft delete"
+          ]
+        },
+        {
+          "id": "retention",
+          "text": "retention schedule per data class with a job that enforces it",
+          "any": [
+            "retention"
+          ]
+        },
+        {
+          "id": "backups",
+          "text": "backups and logs/analytics copies are part of the plan",
+          "any": [
+            "backup"
+          ]
+        },
+        {
+          "id": "ledger-keep",
+          "text": "keep legally required records (ledger) but pseudonymise personal fields",
+          "any": [
+            "pseudonym|anonymi"
+          ]
+        },
+        {
+          "id": "audit",
+          "text": "audit trail of the deletion itself",
+          "any": [
+            "audit"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "analytics",
+      "pack": "data-ml",
+      "refs": [
+        "data/nosql-analytics"
+      ],
+      "prompt": "Management wants dashboards over all transactions. Can we just run the reports on the production database?",
+      "rubric": [
+        {
+          "id": "separate",
+          "text": "separate OLAP from OLTP (replica or warehouse)",
+          "any": [
+            "OLAP"
+          ]
+        },
+        {
+          "id": "cdc",
+          "text": "change data capture / logical replication to feed it",
+          "any": [
+            "CDC|change data capture|logical replication"
+          ]
+        },
+        {
+          "id": "mv",
+          "text": "materialized views; REFRESH CONCURRENTLY needs a unique index",
+          "any": [
+            "CONCURRENTLY"
+          ]
+        },
+        {
+          "id": "replica-lag",
+          "text": "replica queries can be cancelled or delay cleanup (hot_standby_feedback)",
+          "any": [
+            "hot_standby_feedback|conflict"
+          ]
+        },
+        {
+          "id": "pii",
+          "text": "minimise PII in the analytics copy",
+          "any": [
+            "PII|personal"
+          ]
+        }
+      ]
+    }
+  ]
+}

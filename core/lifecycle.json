@@ -1,0 +1,524 @@
+{
+ "version": 1,
+ "about": "Phase state machine read by `eos status` / `eos next`. Per mode: ordered phases, each with exit criteria. The current phase is the first one whose exit criteria are not all met. Checks are declarative (no code): exists, glob_min, checked, tables, table_status, state, any. Edit .eos/lifecycle.json in a project to adapt it; `eos update` keeps your copy if you changed it.",
+ "modes": {
+  "greenfield": [
+   "ideate",
+   "discover",
+   "define",
+   "design",
+   "architect",
+   "build",
+   "ship",
+   "operate"
+  ],
+  "brownfield": [
+   "adopt",
+   "safety-net",
+   "stabilise",
+   "evolve"
+  ],
+  "rewrite": [
+   "decide",
+   "rewrite-safety-net",
+   "slice",
+   "cutover",
+   "decommission"
+  ],
+  "maintain": [
+   "baseline-ops",
+   "steady"
+  ]
+ },
+ "phases": {
+  "ideate": {
+   "title": "Ideation",
+   "goal": "Pick one problem worth solving and write it down.",
+   "why": "Most failed products solve a problem nobody has. Ten minutes of writing beats ten days of building the wrong thing.",
+   "pack": "ideation",
+   "explain": "phases",
+   "exit": [
+    {
+     "any": [
+      {
+       "glob_min": "docs/ideas/*.md",
+       "n": 1
+      },
+      {
+       "glob_min": "_bmad-output/**/*brainstorm*",
+       "n": 1
+      },
+      {
+       "exists": "docs/discovery/brief.md"
+      },
+      {
+       "exists": "docs/prd.md"
+      }
+     ],
+     "label": "an idea note",
+     "do": "Write a one-page idea note (problem, who has it, why now)",
+     "prompt": "Help me shape my idea into docs/ideas/<slug>.md using the ideation pack. Ask me questions one at a time.",
+     "bmad": "bmad-brainstorming"
+    }
+   ]
+  },
+  "discover": {
+   "title": "Discovery",
+   "goal": "Check the riskiest assumptions before committing to build.",
+   "why": "A brief with users, alternatives and a success metric keeps every later decision honest.",
+   "pack": "discovery",
+   "explain": "phases",
+   "exit": [
+    {
+     "any": [
+      {
+       "exists": "docs/discovery/brief.md"
+      },
+      {
+       "glob_min": "_bmad-output/planning-artifacts/*brief*",
+       "n": 1
+      },
+      {
+       "exists": "docs/prd.md"
+      }
+     ],
+     "label": "a product brief",
+     "do": "Write the product brief",
+     "prompt": "Draft docs/discovery/brief.md with the discovery pack: users, problem, alternatives, success metric, riskiest assumptions.",
+     "bmad": "bmad-product-brief"
+    }
+   ]
+  },
+  "define": {
+   "title": "Requirements",
+   "goal": "Agree what version 1 does, and what it does not.",
+   "why": "Written requirements with acceptance criteria are what tests and reviews are checked against; without them 'done' is an opinion.",
+   "pack": "requirements",
+   "explain": "definition-of-done",
+   "exit": [
+    {
+     "any": [
+      {
+       "exists": "docs/prd.md"
+      },
+      {
+       "glob_min": "_bmad-output/planning-artifacts/*prd*",
+       "n": 1
+      }
+     ],
+     "label": "approved requirements (PRD)",
+     "do": "Write the requirements (PRD) and get them approved",
+     "prompt": "Turn the brief into docs/prd.md with the requirements pack: scope, non-goals, acceptance criteria per feature.",
+     "bmad": "bmad-prd"
+    }
+   ]
+  },
+  "design": {
+   "title": "UX and design direction",
+   "goal": "Main user flows and a deliberate visual direction.",
+   "why": "Deciding flows before code avoids rebuilding screens; a written design direction stops the generic AI look.",
+   "pack": "ux-design",
+   "skip_profiles": [
+    "api",
+    "cli-library",
+    "data-ml"
+   ],
+   "explain": "phases",
+   "exit": [
+    {
+     "any": [
+      {
+       "exists": "docs/ux/flows.md"
+      },
+      {
+       "glob_min": "_bmad-output/planning-artifacts/*ux*",
+       "n": 1
+      }
+     ],
+     "label": "user flows",
+     "do": "Sketch the main user flows",
+     "prompt": "Write docs/ux/flows.md (ux-design pack): the 3-5 key flows, states and errors.",
+     "bmad": "bmad-ux"
+    },
+    {
+     "exists": "docs/design/direction.md",
+     "label": "a design direction",
+     "do": "Write the design direction",
+     "cmd": "eos new design"
+    }
+   ]
+  },
+  "architect": {
+   "title": "Architecture",
+   "goal": "The simplest structure that meets the requirements, with the key decisions recorded.",
+   "why": "Decisions written as ADRs can be revisited deliberately; unwritten ones get re-litigated by every agent session.",
+   "pack": "architecture",
+   "explain": "adr",
+   "exit": [
+    {
+     "any": [
+      {
+       "exists": "docs/architecture/overview.md"
+      },
+      {
+       "glob_min": "_bmad-output/planning-artifacts/*architecture*",
+       "n": 1
+      }
+     ],
+     "label": "an architecture overview",
+     "do": "Write the architecture overview",
+     "prompt": "Propose the simplest architecture for docs/prd.md in docs/architecture/overview.md (architecture pack). Start as a modular monolith unless there is a reason not to.",
+     "bmad": "bmad-architecture"
+    },
+    {
+     "any": [
+      {
+       "tables": "docs/architecture/overview.md",
+       "headings": [
+        "Quality attributes",
+        "Failure modes"
+       ]
+      },
+      {
+       "glob_min": "_bmad-output/planning-artifacts/*architecture*",
+       "n": 1
+      }
+     ],
+     "label": "quality-attribute and failure-mode tables",
+     "do": "Add the quality-attribute and failure-mode tables to the overview",
+     "prompt": "In docs/architecture/overview.md add a '## Quality attributes' table (attribute, testable scenario, measure, design answer) and a '## Failure modes' table (dependency, timeout, retry, breaker, what the user sees). Use .eos/packs/ref/architecture/quality-attributes.md and resilience.md.",
+     "why": "A design is only as good as the attributes it was checked against and the failures it plans for; tables make both reviewable."
+    },
+    {
+     "glob_min": "docs/adr/[0-9][0-9][0-9][0-9]-*.md",
+     "n": 2,
+     "label": "first ADR (beyond the template)",
+     "do": "Record the first key decision as an ADR",
+     "cmd": "eos new adr \"<decision>\"",
+     "why": "A decision written down can be revisited on purpose instead of re-argued by every session."
+    }
+   ]
+  },
+  "build": {
+   "title": "Build (stories)",
+   "goal": "Deliver the requirements in small, tested stories.",
+   "why": "Small stories with acceptance criteria keep each change reviewable and each 'done' verifiable.",
+   "pack": "testing-qa",
+   "explain": "definition-of-done",
+   "exit": [
+    {
+     "any": [
+      {
+       "glob_min": "docs/stories/[0-9]*.md",
+       "n": 1
+      },
+      {
+       "glob_min": "_bmad-output/implementation-artifacts/**/*.md",
+       "n": 1
+      }
+     ],
+     "label": "stories",
+     "do": "Split the PRD into stories",
+     "cmd": "eos new story \"<title>\"",
+     "bmad": "bmad-create-epics-and-stories",
+     "why": "Small stories with acceptance criteria keep every change reviewable and every 'done' checkable."
+    },
+    {
+     "state": "stories_open_zero",
+     "label": "every story done",
+     "do": "Finish the open story",
+     "prompt": "Implement the next story with its acceptance criteria as tests; run the full check before saying done.",
+     "explain": "definition-of-done"
+    }
+   ]
+  },
+  "ship": {
+   "title": "Release",
+   "goal": "A first versioned release users can rely on.",
+   "why": "A tagged release with a changelog is something you can roll back to and talk about.",
+   "pack": "release",
+   "explain": "phases",
+   "exit": [
+    {
+     "any": [
+      {
+       "state": "tags_min_1"
+      },
+      {
+       "exists": "CHANGELOG.md"
+      }
+     ],
+     "label": "a first release (tag or CHANGELOG)",
+     "do": "Cut the first release",
+     "cmd": "eos scaffold release"
+    }
+   ]
+  },
+  "operate": {
+   "title": "Operate",
+   "goal": "Know when it is broken before users tell you.",
+   "why": "An SLO and a runbook turn 3 a.m. panic into a checklist.",
+   "pack": "operations",
+   "explain": "slo",
+   "exit": [
+    {
+     "any": [
+      {
+       "exists": "docs/ops/slo.md"
+      },
+      {
+       "glob_min": "docs/runbooks/*.md",
+       "n": 1
+      }
+     ],
+     "label": "an SLO or a runbook",
+     "do": "Write the SLO and the first runbook",
+     "prompt": "Define 1-3 SLOs in docs/ops/slo.md and a runbook for the most likely alert (operations pack)."
+    }
+   ],
+   "then": "The product is live: switch to maintenance mode with `eos mode set maintain`."
+  },
+  "adopt": {
+   "title": "Adopt (map the existing code)",
+   "goal": "eos knows the project: map, baseline and plan exist; nothing of yours was overwritten.",
+   "why": "You can't improve what you haven't measured. The baseline is the line that may only move one way.",
+   "pack": "maintenance",
+   "explain": "brownfield",
+   "exit": [
+    {
+     "exists": "docs/eos/project-map.md",
+     "label": "a project map",
+     "do": "Scan the project",
+     "cmd": "eos adopt"
+    },
+    {
+     "exists": "docs/plans/improvement-plan.md",
+     "label": "an improvement plan",
+     "do": "Write the improvement plan",
+     "cmd": "eos adopt --report-only"
+    }
+   ]
+  },
+  "safety-net": {
+   "title": "Safety net",
+   "goal": "Old violations are baselined (ratchet) and the riskiest code has characterization tests.",
+   "why": "A ratchet lets you start strict today without fixing years of old issues first; characterization tests make change safe.",
+   "pack": "migration",
+   "explain": "ratchet",
+   "exit": [
+    {
+     "glob_min": ".eos/baseline/*.json",
+     "n": 1,
+     "label": "a ratchet baseline",
+     "do": "Baseline your linters",
+     "cmd": "eos ratchet init",
+     "why": "Recording today's lint/type violations lets you be strict about new code now, without fixing years of old issues first."
+    },
+    {
+     "any": [
+      {
+       "glob_min": "tests/characterization/**/*.*",
+       "n": 2
+      },
+      {
+       "state": "test_ratio_min_0.2"
+      }
+     ],
+     "label": "tests around the hot spots",
+     "do": "Pin current behaviour of the most-changed files",
+     "prompt": "Read docs/eos/project-map.md (hot spots). Write characterization tests that pin what the top hot spot does today (migration pack). No behaviour changes.",
+     "explain": "characterization-tests",
+     "why": "You can't change code safely without knowing what it does today; these tests catch accidental changes."
+    }
+   ]
+  },
+  "stabilise": {
+   "title": "Stabilise (P0/P1 items)",
+   "goal": "The safety and gate items in the improvement plan are done.",
+   "why": "Fixing safety and feedback loops first makes every later change cheaper.",
+   "pack": "maintenance",
+   "explain": "ratchet",
+   "exit": [
+    {
+     "state": "plan_p0_p1_done",
+     "label": "P0/P1 improvement items done",
+     "do": "Do the next improvement item",
+     "from_plan": true
+    }
+   ]
+  },
+  "evolve": {
+   "title": "Evolve",
+   "goal": "Ship features in small slices; tighten gates as counts drop.",
+   "why": "The ratchet only moves one way: every PR leaves the code a little better than it found it.",
+   "pack": "maintenance",
+   "explain": "ratchet",
+   "continuous": true,
+   "exit": [
+    {
+     "state": "stories_open_zero",
+     "label": "open stories done",
+     "do": "Continue the open story"
+    },
+    {
+     "state": "plan_all_done",
+     "label": "improvement plan done",
+     "do": "Do the next improvement item",
+     "from_plan": true
+    }
+   ],
+   "then": "When ratchet counts reach zero, switch gates to strict: `eos gates strict`."
+  },
+  "decide": {
+   "title": "Decide the migration",
+   "goal": "Why, what moves, and the seam where old and new are switched, written down and approved.",
+   "why": "Big-bang rewrites are where projects go to die; a written seam and slice list makes the rewrite incremental and reversible.",
+   "pack": "migration",
+   "explain": "strangler-fig",
+   "exit": [
+    {
+     "glob_min": "docs/migration/*/plan.md",
+     "n": 1,
+     "label": "a migration plan",
+     "do": "Scaffold the migration plan",
+     "cmd": "eos new migration \"<name>\""
+    },
+    {
+     "filled": "docs/migration/*/plan.md",
+     "placeholder": "<proxy route / facade module",
+     "label": "the seam filled in",
+     "do": "Fill the seam and the slice table in plan.md",
+     "prompt": "Help me fill docs/migration/<name>/plan.md (migration pack): the seam, and thin slices ordered by risk.",
+     "why": "The seam is where old and new are switched; without it the rewrite can't be done in small reversible slices."
+    },
+    {
+     "glob_min": "docs/adr/[0-9][0-9][0-9][0-9]-*.md",
+     "n": 2,
+     "label": "an ADR for the approach",
+     "do": "Record the approach as an ADR",
+     "cmd": "eos new adr \"Migrate <x> with strangler fig\""
+    }
+   ]
+  },
+  "rewrite-safety-net": {
+   "title": "Safety net before change",
+   "goal": "Current behaviour is pinned by characterization / golden-master tests and baseline metrics.",
+   "why": "Parity means 'behaves the same as today'; you can only prove that if today's behaviour is recorded first.",
+   "pack": "migration",
+   "explain": "characterization-tests",
+   "exit": [
+    {
+     "glob_min": "tests/characterization/**/*.*",
+     "n": 2,
+     "label": "characterization tests",
+     "do": "Write characterization tests for the first slice",
+     "prompt": "Write golden-master tests in tests/characterization/ for the behaviour of slice 1 in docs/migration/<name>/plan.md. Record real inputs and outputs; scrub ids and times.",
+     "why": "Parity means 'behaves like today'; you can only prove it if today's behaviour is recorded first."
+    },
+    {
+     "checked": "docs/migration/*/plan.md",
+     "heading": "Safety net",
+     "label": "safety-net checklist ticked",
+     "do": "Tick the safety-net checklist in plan.md (tests, known bugs, baseline metrics)"
+    }
+   ]
+  },
+  "slice": {
+   "title": "Migrate slice by slice",
+   "goal": "Each slice runs behind a flag, in shadow then canary, with parity evidence.",
+   "why": "Thin, flagged slices mean any mistake is one flag flip from being undone.",
+   "pack": "migration",
+   "explain": "parity",
+   "exit": [
+    {
+     "table_status": "docs/migration/*/plan.md",
+     "heading": "Slices",
+     "all_in": [
+      "live",
+      "old removed"
+     ],
+     "label": "every slice live",
+     "do": "Move the next slice forward (planned → shadow → canary → live)",
+     "prompt": "Implement the next planned slice from docs/migration/<name>/plan.md behind its flag, dual-run it, and record parity in parity.md."
+    }
+   ]
+  },
+  "cutover": {
+   "title": "Cutover",
+   "goal": "The old path is off, with a rehearsed rollback.",
+   "why": "A rollback you haven't rehearsed is a hope, not a plan.",
+   "pack": "migration",
+   "explain": "rollback",
+   "exit": [
+    {
+     "checked": "docs/migration/*/cutover-runbook.md",
+     "heading": "Preconditions",
+     "label": "cutover preconditions met",
+     "do": "Complete the cutover preconditions (parity green, backup restored, rollback rehearsed)"
+    }
+   ]
+  },
+  "decommission": {
+   "title": "Decommission",
+   "goal": "Old code, flags and data are removed after the rollback window.",
+   "why": "Leftover flags and dead code are the next team's legacy.",
+   "pack": "migration",
+   "explain": "feature-flags",
+   "exit": [
+    {
+     "table_status": "docs/migration/*/plan.md",
+     "heading": "Slices",
+     "all_in": [
+      "old removed"
+     ],
+     "label": "old paths removed",
+     "do": "Remove the old path and its flag for live slices"
+    }
+   ],
+   "then": "Migration complete: `eos mode set maintain` (or brownfield if more work is planned)."
+  },
+  "baseline-ops": {
+   "title": "Operational baseline",
+   "goal": "SLOs, runbooks and a debt register exist for the live product.",
+   "why": "In a mature product the main risk is breaking what users rely on; SLOs tell you how much risk you can afford.",
+   "pack": "operations",
+   "explain": "slo",
+   "exit": [
+    {
+     "exists": "docs/ops/slo.md",
+     "label": "SLOs",
+     "do": "Write the SLOs",
+     "prompt": "Define 1-3 user-facing SLOs in docs/ops/slo.md (performance-scale pack)."
+    },
+    {
+     "glob_min": "docs/runbooks/*.md",
+     "n": 1,
+     "label": "a runbook",
+     "do": "Write a runbook for the most likely alert",
+     "prompt": "Write docs/runbooks/<alert>.md for our most likely incident (operations pack)."
+    }
+   ]
+  },
+  "steady": {
+   "title": "Steady state",
+   "goal": "Small, reversible releases; debt paid down continuously.",
+   "why": "Mature products die from a thousand drive-by changes; small flagged releases keep them healthy.",
+   "pack": "maintenance",
+   "explain": "feature-flags",
+   "continuous": true,
+   "exit": [
+    {
+     "state": "stories_open_zero",
+     "label": "open stories done",
+     "do": "Continue the open story"
+    },
+    {
+     "state": "plan_all_done",
+     "label": "improvement plan done",
+     "do": "Do the next improvement item",
+     "from_plan": true
+    }
+   ]
+  }
+ }
+}

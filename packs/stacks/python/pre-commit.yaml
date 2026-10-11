@@ -1,0 +1,22 @@
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+  - repo: local
+    hooks:
+      - id: py-typecheck
+        name: python type-check (pre-push)
+        entry: python .eos/bin/eos.py hook-run --id py-typecheck@{{PY_DIR}} -- uv run --directory {{PY_DIR}} mypy .
+        language: python
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push]
+      - id: py-tests
+        name: python tests (pre-push)
+        entry: python .eos/bin/eos.py hook-run --id py-tests@{{PY_DIR}} -- uv run --directory {{PY_DIR}} pytest -q -x --ff
+        language: python
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push]

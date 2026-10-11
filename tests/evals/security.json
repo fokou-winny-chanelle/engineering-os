@@ -1,0 +1,167 @@
+{
+  "about": "Eval tasks for the security library (stage 2). Same method as architecture.json: context coverage (pack vs pack+refs) is an availability proxy, not proof of better answers; rubric and refs share an author. Score real agent answers with --responses DIR.",
+  "tasks": [
+    {
+      "id": "momo-webhook",
+      "pack": "security",
+      "refs": ["security/payments"],
+      "prompt": "Add an endpoint that receives mobile-money payment callbacks and credits the user's wallet.",
+      "rubric": [
+        {"id": "raw", "text": "verify signature over the raw body", "any": ["raw (request )?body"]},
+        {"id": "ct", "text": "constant-time comparison", "any": ["constant-time|compare_digest|timingSafeEqual"]},
+        {"id": "ts", "text": "timestamp tolerance against replay", "any": ["tolerance|stale timestamp"]},
+        {"id": "dedupe", "text": "deduplicate by event id", "any": ["event id|dedup"]},
+        {"id": "status-api", "text": "re-verify status/amount with the provider API before crediting", "any": ["status API|provider API"]},
+        {"id": "ledger", "text": "append-only double-entry ledger, not balance += x", "any": ["double-entry|append-only"]},
+        {"id": "minor", "text": "integer minor units, XAF has 0 decimals", "any": ["minor units|XAF"]}
+      ]
+    },
+    {
+      "id": "idempotent-transfer",
+      "pack": "security",
+      "refs": ["security/payments"],
+      "prompt": "Users sometimes get charged twice when they tap 'Send' on a flaky connection. Fix it.",
+      "rubric": [
+        {"id": "key", "text": "Idempotency-Key from the client", "any": ["Idempotency-Key|idempotency key"]},
+        {"id": "unique", "text": "DB unique constraint in the same transaction", "any": ["UNIQUE|unique constraint"]},
+        {"id": "saved", "text": "return the saved response on retry", "any": ["saved response|same response|stored response"]},
+        {"id": "outbound", "text": "pass idempotency keys to the provider", "any": ["outbound|to providers"]},
+        {"id": "concurrency", "text": "concurrency test with two simultaneous requests", "any": ["simultaneous|concurren"]}
+      ]
+    },
+    {
+      "id": "spa-login",
+      "pack": "security",
+      "refs": ["security/oauth-oidc-jwt", "security/authentication"],
+      "prompt": "Our React SPA stores a 7-day JWT in localStorage after Google login. Review the design.",
+      "rubric": [
+        {"id": "bff", "text": "Backend for Frontend / cookie session", "any": ["Backend for Frontend|BFF"]},
+        {"id": "pkce", "text": "authorization code + PKCE", "any": ["PKCE"]},
+        {"id": "httponly", "text": "HttpOnly Secure cookie", "any": ["HttpOnly"]},
+        {"id": "aud", "text": "validate iss/aud/exp", "any": ["\\baud\\b|audience"]},
+        {"id": "rotation", "text": "refresh token rotation or sender-constraining", "any": ["rotat|sender-constrained|DPoP"]},
+        {"id": "rfc", "text": "cites current BCPs", "any": ["RFC 9700|RFC 10017"]}
+      ]
+    },
+    {
+      "id": "jwt-verify",
+      "pack": "security",
+      "refs": ["security/oauth-oidc-jwt"],
+      "prompt": "Write middleware that authenticates API calls with bearer JWTs from our identity provider.",
+      "rubric": [
+        {"id": "allow", "text": "explicit algorithm allow-list, reject none", "any": ["allow-list|alg: none|algorithm"]},
+        {"id": "jwks", "text": "keys from issuer JWKS by kid", "any": ["JWKS"]},
+        {"id": "aud", "text": "check iss, aud, exp", "any": ["\\baud\\b"]},
+        {"id": "typ", "text": "explicit typing so ID tokens are not accepted", "any": ["at\\+jwt|explicit typ"]},
+        {"id": "tests", "text": "negative tests (wrong aud, expired, none)", "any": ["wrong `?aud|expired"]}
+      ]
+    },
+    {
+      "id": "idor-invoices",
+      "pack": "api-design",
+      "refs": ["security/authorization"],
+      "prompt": "Add GET/PATCH /invoices/{id} for a multi-tenant B2B app.",
+      "rubric": [
+        {"id": "scope", "text": "query scoped by session tenant/owner", "any": ["scoped|owner_id|tenant from the (authenticated )?session"]},
+        {"id": "uuid", "text": "UUIDs are not authorization", "any": ["not\\*\\* authorization|not authorization"]},
+        {"id": "404", "text": "404 for objects the actor may not see", "any": ["404"]},
+        {"id": "mass", "text": "explicit input schema against mass assignment", "any": ["mass assignment|allow-list of writable"]},
+        {"id": "matrix", "text": "authorization matrix test incl. cross-tenant", "any": ["matrix"]},
+        {"id": "rls", "text": "Postgres RLS as defence in depth (owner bypass caveat)", "any": ["ROW LEVEL SECURITY|BYPASSRLS"]}
+      ]
+    },
+    {
+      "id": "url-preview",
+      "pack": "backend",
+      "refs": ["security/input-injection"],
+      "prompt": "Users can paste a URL and we fetch it server-side to show a link preview.",
+      "rubric": [
+        {"id": "ssrf", "text": "names SSRF", "any": ["SSRF"]},
+        {"id": "private", "text": "block private/link-local after DNS resolution", "any": ["169\\.254|link-local|after resolution"]},
+        {"id": "redirect", "text": "re-check or disable redirects", "any": ["redirect"]},
+        {"id": "imds", "text": "IMDSv2 on cloud", "any": ["IMDSv2"]},
+        {"id": "rebind", "text": "DNS rebinding", "any": ["rebinding"]}
+      ]
+    },
+    {
+      "id": "password-policy",
+      "pack": "security",
+      "refs": ["security/authentication"],
+      "prompt": "Product wants passwords with 8+ chars, a symbol, and a forced change every 90 days. Implement signup and storage.",
+      "rubric": [
+        {"id": "len", "text": "15 chars single-factor (NIST 800-63B-4)", "any": ["15 characters"]},
+        {"id": "nocomp", "text": "no composition rules / no periodic change", "any": ["composition rules|periodic"]},
+        {"id": "block", "text": "breached-password blocklist", "any": ["blocklist|breached"]},
+        {"id": "argon", "text": "Argon2id with OWASP parameters", "any": ["Argon2id"]},
+        {"id": "enum", "text": "no account enumeration", "any": ["same message|generic error|enumeration"]},
+        {"id": "rotate-session", "text": "regenerate session id on login", "any": ["[Rr]egenerate the session ID|session fixation"]}
+      ]
+    },
+    {
+      "id": "add-dependency",
+      "pack": "security",
+      "refs": ["security/supply-chain"],
+      "prompt": "The assistant suggested `pip install fastapi-auth-helpers-pro` to add OAuth quickly. Proceed?",
+      "rubric": [
+        {"id": "exists", "text": "check the package exists and is the real project", "any": ["exists"]},
+        {"id": "slop", "text": "slopsquatting / hallucinated packages", "any": ["slopsquatting|hallucinat"]},
+        {"id": "age", "text": "release-age delay", "any": ["release-age|exclude-newer|minimumReleaseAge|min-release-age"]},
+        {"id": "lock", "text": "lockfile + locked install", "any": ["lockfile|--locked|--frozen"]},
+        {"id": "pin-actions", "text": "SHA-pinned Actions", "any": ["SHA"]}
+      ]
+    },
+    {
+      "id": "email-agent",
+      "pack": "agent-security",
+      "refs": ["security/llm-agent-security"],
+      "prompt": "Build an AI assistant that reads the user's inbox, summarises threads and can reply on their behalf.",
+      "rubric": [
+        {"id": "trifecta", "text": "lethal trifecta / rule of two", "any": ["trifecta|Rule of Two"]},
+        {"id": "human", "text": "human approval of each send", "any": ["human approval|human-in-the-loop"]},
+        {"id": "exfil", "text": "markdown image / URL exfiltration", "any": ["image|exfiltrat"]},
+        {"id": "pattern", "text": "injection-resistant design pattern", "any": ["dual LLM|plan-then-execute|action-selector|CaMeL"]},
+        {"id": "least", "text": "least-privilege tools / per-user credentials", "any": ["least.privilege|per-user"]},
+        {"id": "owasp", "text": "maps to OWASP LLM/Agentic lists", "any": ["LLM01|ASI01"]}
+      ]
+    },
+    {
+      "id": "mcp-server",
+      "pack": "agent-security",
+      "refs": ["security/llm-agent-security"],
+      "prompt": "Expose our internal billing API to Claude/Cursor via an MCP server that forwards the user's token.",
+      "rubric": [
+        {"id": "passthrough", "text": "token passthrough forbidden", "any": ["[Tt]oken passthrough"]},
+        {"id": "audience", "text": "audience-validated tokens", "any": ["audience"]},
+        {"id": "deputy", "text": "confused deputy", "any": ["[Cc]onfused deputy"]},
+        {"id": "narrow", "text": "narrow tools with server-side limits", "any": ["narrow"]},
+        {"id": "secrets-git", "text": "MCP configs with secrets out of git", "any": ["out of git|git-ignored"]}
+      ]
+    },
+    {
+      "id": "kyc-data",
+      "pack": "data-modeling",
+      "refs": ["security/privacy"],
+      "prompt": "We are adding national ID photos and selfies for KYC for users in Cameroon, stored with a US cloud provider.",
+      "rubric": [
+        {"id": "inventory", "text": "data inventory / records of processing", "any": ["records of processing|data inventory"]},
+        {"id": "dpia", "text": "DPIA for high-risk processing", "any": ["DPIA"]},
+        {"id": "transfer", "text": "cross-border transfer needs prior authorisation", "any": ["cross-border"]},
+        {"id": "breach", "text": "breach notification duty", "any": ["breach notification|notify"]},
+        {"id": "caveat", "text": "not legal advice / confirm with counsel", "any": ["[Nn]ot legal advice|counsel"]},
+        {"id": "retention", "text": "retention and deletion", "any": ["retention"]}
+      ]
+    },
+    {
+      "id": "pci-checkout",
+      "pack": "security",
+      "refs": ["security/payments", "security/web-api-hardening"],
+      "prompt": "We embed the payment provider's card iframe on our checkout page. What PCI work do we have?",
+      "rubric": [
+        {"id": "saqa", "text": "SAQ A and the 2025 eligibility criterion about scripts", "any": ["SAQ A"]},
+        {"id": "iframe", "text": "criterion applies to embedded iframes, not redirects", "any": ["redirect"]},
+        {"id": "scripts", "text": "script inventory / CSP on payment pages", "any": ["script inventor|CSP"]},
+        {"id": "acquirer", "text": "acquirer confirms the SAQ", "any": ["acquirer"]}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+# engineering-os -> BMAD product manager (John).
+[agent]
+persistent_facts = [
+  "Acceptance criteria use EARS form with IDs (AC-n); NFRs are numbers; money/state rules must be confirmed by a human.",
+  "file:{project-root}/.eos/packs/phases/requirements.md",
+]

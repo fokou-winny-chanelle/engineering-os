@@ -1,0 +1,33 @@
+{
+ "eos": "0.6.0",
+ "rev": "6a6d6b0",
+ "runs": 15,
+ "guard_read_ms": [
+  44,
+  117
+ ],
+ "guard_edit_ms": [
+  44,
+  61
+ ],
+ "guard_shell_ms": [
+  48,
+  54
+ ],
+ "eos_check_ms": [
+  113,
+  114
+ ],
+ "commit_docs_typo_ms": [
+  394,
+  411
+ ],
+ "commit_py_change_ms": [
+  398,
+  407
+ ],
+ "stop_check_py_ms": [
+  420,
+  456
+ ]
+}

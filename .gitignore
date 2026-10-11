@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+.eos/state/
+*.eos-new
+*.eos-bak
+.env
+.env.*
+!.env.example
+secrets.env
+.ruff_cache/
+# personal overrides (never committed)
+personal/*.user.md
+personal/*.user.toml
+# local tooling and artefacts
+node_modules/
+.venv/
+*.pdf
+*.zip

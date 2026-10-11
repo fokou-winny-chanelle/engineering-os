@@ -1,0 +1,638 @@
+{
+ "about": "Eval tasks for the testing & QA library (stage 5). Same method as the other eval files: context coverage (pack vs pack+refs) is an availability proxy, not proof of better answers; rubric and refs share an author. Score real agent answers with --responses DIR.",
+ "tasks": [
+  {
+   "id": "strategy-shape",
+   "pack": "testing-qa",
+   "refs": [
+    "testing/strategy"
+   ],
+   "prompt": "We have a Next.js frontend and three small backend services. Should we follow the test pyramid? Where should most of our tests be?",
+   "rubric": [
+    {
+     "id": "trophy",
+     "text": "names trophy / honeycomb alternatives",
+     "any": [
+      "trophy"
+     ]
+    },
+    {
+     "id": "honeycomb",
+     "text": "honeycomb for services: integration-heavy",
+     "any": [
+      "honeycomb"
+     ]
+    },
+    {
+     "id": "integrated",
+     "text": "avoid integrated tests that depend on another system's correctness",
+     "any": [
+      "integrated\\W*tests?"
+     ]
+    },
+    {
+     "id": "notest",
+     "text": "says what not to test",
+     "any": [
+      "what not|not to test|don't test|do not test"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "over-mocking",
+   "pack": "testing-qa",
+   "refs": [
+    "testing/unit-design"
+   ],
+   "prompt": "Review this unit test: it mocks the repository, the clock, the price calculator and the service under test's private helper, then asserts each mock was called once.",
+   "rubric": [
+    {
+     "id": "behaviour",
+     "text": "test behaviour through the public API, not implementation",
+     "any": [
+      "behaviou?r"
+     ]
+    },
+    {
+     "id": "fake",
+     "text": "prefer real or fake over mocks",
+     "any": [
+      "fake"
+     ]
+    },
+    {
+     "id": "state",
+     "text": "state verification over interaction verification",
+     "any": [
+      "state (testing|verification)|interaction"
+     ]
+    },
+    {
+     "id": "owned",
+     "text": "don't mock types you don't own / the unit under test",
+     "any": [
+      "don't own|do not own|not own"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "real-db",
+   "pack": "testing-qa",
+   "refs": [
+    "testing/integration"
+   ],
+   "prompt": "Our repository tests use SQLite in memory but production is Postgres. Set up integration tests properly in CI.",
+   "rubric": [
+    {
+     "id": "tc",
+     "text": "Testcontainers / real engine",
+     "any": [
+      "testcontainers"
+     ]
+    },
+    {
+     "id": "version",
+     "text": "same engine and version as production",
+     "any": [
+      "same (major )?version|production version"
+     ]
+    },
+    {
+     "id": "rollback",
+     "text": "isolate with transaction rollback or fresh schema",
+     "any": [
+      "rollback|roll back"
+     ]
+    },
+    {
+     "id": "migrations",
+     "text": "apply real migrations",
+     "any": [
+      "migrations"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "e2e-flaky",
+   "pack": "testing-qa",
+   "refs": [
+    "testing/e2e-playwright"
+   ],
+   "prompt": "Our Playwright tests use CSS selectors, log in through the UI in every test and fail randomly in CI. Fix the setup.",
+   "rubric": [
+    {
+     "id": "role",
+     "text": "getByRole / user-facing locators",
+     "any": [
+      "getByRole"
+     ]
+    },
+    {
+     "id": "storage",
+     "text": "setup project + storageState, gitignored",
+     "any": [
+      "storageState"
+     ]
+    },
+    {
+     "id": "webfirst",
+     "text": "web-first assertions, no waitForTimeout",
+     "any": [
+      "web-first"
+     ]
+    },
+    {
+     "id": "trace",
+     "text": "trace on first retry",
+     "any": [
+      "on-first-retry"
+     ]
+    },
+    {
+     "id": "shard",
+     "text": "sharding with blob reporter / merge-reports",
+     "any": [
+      "shard"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "visual-a11y",
+   "pack": "testing-qa",
+   "refs": [
+    "testing/e2e-playwright"
+   ],
+   "prompt": "Add screenshot regression tests and automated accessibility checks to our checkout pages.",
+   "rubric": [
+    {
+     "id": "env",
+     "text": "baselines generated in the same environment as comparison",
+     "any": [
+      "same environment|same (OS|machine|image)"
+     ]
+    },
+    {
+     "id": "mask",
+     "text": "mask dynamic regions",
+     "any": [
+      "mask"
+     ]
+    },
+    {
+     "id": "axe",
+     "text": "axe-core/playwright",
+     "any": [
+      "axe"
+     ]
+    },
+    {
+     "id": "manual",
+     "text": "automated a11y catches only some issues; manual keyboard/screen reader pass",
+     "any": [
+      "screen.reader|keyboard"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "property",
+   "pack": "testing-qa",
+   "refs": [
+    "testing/property-fuzz"
+   ],
+   "prompt": "Write tests for our function that splits a bill total among N people in cents.",
+   "rubric": [
+    {
+     "id": "pbt",
+     "text": "property-based test (Hypothesis / fast-check)",
+     "any": [
+      "hypothesis|fast-check"
+     ]
+    },
+    {
+     "id": "invariant",
+     "text": "invariant: shares sum to total, differ by at most one",
+     "any": [
+      "add up|sum to|sums to"
+     ]
+    },
+    {
+     "id": "example",
+     "text": "pin shrunk counterexample as explicit example",
+     "any": [
+      "@example|explicit example|pinned example"
+     ]
+    },
+    {
+     "id": "seed",
+     "text": "reproducible: seed / ci profile",
+     "any": [
+      "seed|derandomi"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "mutation",
+   "pack": "testing-qa",
+   "refs": [
+    "testing/mutation"
+   ],
+   "prompt": "Coverage on our billing module is 95% but a refund bug still shipped. How do we know our tests actually check the fee logic?",
+   "rubric": [
+    {
+     "id": "mut",
+     "text": "mutation testing",
+     "any": [
+      "mutation"
+     ]
+    },
+    {
+     "id": "tool",
+     "text": "mutmut or Stryker",
+     "any": [
+      "mutmut|stryker"
+     ]
+    },
+    {
+     "id": "incremental",
+     "text": "only changed/risky files, incremental",
+     "any": [
+      "incremental|changed"
+     ]
+    },
+    {
+     "id": "equiv",
+     "text": "equivalent mutants; don't chase 100%",
+     "any": [
+      "equivalent"
+     ]
+    },
+    {
+     "id": "boundary",
+     "text": "survivors often mean missing boundary/exact-amount assertions",
+     "any": [
+      "boundary"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "load",
+   "pack": "performance-scale",
+   "refs": [
+    "testing/performance-k6"
+   ],
+   "prompt": "Write a k6 load test for our checkout API before Black Friday.",
+   "rubric": [
+    {
+     "id": "open",
+     "text": "arrival-rate (open model) executor",
+     "any": [
+      "arrival-rate|open model"
+     ]
+    },
+    {
+     "id": "thresh",
+     "text": "thresholds fail the run; checks alone don't",
+     "any": [
+      "threshold"
+     ]
+    },
+    {
+     "id": "pct",
+     "text": "percentiles not averages",
+     "any": [
+      "p\\(95\\)|p95|percentile"
+     ]
+    },
+    {
+     "id": "data",
+     "text": "varied realistic data, SharedArray",
+     "any": [
+      "SharedArray|realistic data"
+     ]
+    },
+    {
+     "id": "where",
+     "text": "staging / not prod unannounced; CI runners not for capacity claims",
+     "any": [
+      "staging"
+     ]
+    },
+    {
+     "id": "stress",
+     "text": "stress/spike test type for peaks",
+     "any": [
+      "spike|stress"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "test-data",
+   "pack": "testing-qa",
+   "refs": [
+    "testing/test-data"
+   ],
+   "prompt": "Can we copy last week's production database into staging so QA has realistic data?",
+   "rubric": [
+    {
+     "id": "synthetic",
+     "text": "prefer synthetic data",
+     "any": [
+      "synthetic"
+     ]
+    },
+    {
+     "id": "mask",
+     "text": "mask/anonymise first (PostgreSQL Anonymizer)",
+     "any": [
+      "anonymi[sz]er|mask"
+     ]
+    },
+    {
+     "id": "pseudo",
+     "text": "pseudonymised data is still personal data",
+     "any": [
+      "pseudonymi[sz]ed"
+     ]
+    },
+    {
+     "id": "human",
+     "text": "human approval with purpose and deletion date",
+     "any": [
+      "deletion date|human approv"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "flaky",
+   "pack": "testing-qa",
+   "refs": [
+    "testing/flaky-speed"
+   ],
+   "prompt": "One test fails about once in twenty CI runs. The team wants to set retries to 3 for the whole suite.",
+   "rubric": [
+    {
+     "id": "quarantine",
+     "text": "quarantine with owner and expiry",
+     "any": [
+      "quarantine"
+     ]
+    },
+    {
+     "id": "expiry",
+     "text": "entries expire",
+     "any": [
+      "expir"
+     ]
+    },
+    {
+     "id": "noretry",
+     "text": "no global retries; retries visible",
+     "any": [
+      "silently|global retries"
+     ]
+    },
+    {
+     "id": "repeat",
+     "text": "reproduce with repeat-each / flakefinder",
+     "any": [
+      "repeat-each|flakefinder"
+     ]
+    },
+    {
+     "id": "cause",
+     "text": "root causes: isolation, async, time, order",
+     "any": [
+      "isolation"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "slow-ci",
+   "pack": "testing-qa",
+   "refs": [
+    "testing/flaky-speed"
+   ],
+   "prompt": "Our CI test job takes 40 minutes. Make it faster without losing safety.",
+   "rubric": [
+    {
+     "id": "measure",
+     "text": "measure slowest tests first",
+     "any": [
+      "durations|slowest"
+     ]
+    },
+    {
+     "id": "parallel",
+     "text": "parallelise (xdist, workers)",
+     "any": [
+      "xdist|parallel"
+     ]
+    },
+    {
+     "id": "shard",
+     "text": "shard across machines",
+     "any": [
+      "shard"
+     ]
+    },
+    {
+     "id": "cache",
+     "text": "cache dependencies keyed on lockfile",
+     "any": [
+      "cache"
+     ]
+    },
+    {
+     "id": "main",
+     "text": "affected-test selection for PRs, full run on main",
+     "any": [
+      "main"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "coverage-gate",
+   "pack": "testing-qa",
+   "refs": [
+    "testing/coverage-ai-code"
+   ],
+   "prompt": "Management wants a 100% coverage requirement on the whole repo. What should we do instead?",
+   "rubric": [
+    {
+     "id": "diff",
+     "text": "gate changed lines (diff coverage)",
+     "any": [
+      "changed.line|diff.coverage"
+     ]
+    },
+    {
+     "id": "ratchet",
+     "text": "ratchet the total",
+     "any": [
+      "ratchet|autoUpdate"
+     ]
+    },
+    {
+     "id": "guidance",
+     "text": "Google 60/75/90 guidance",
+     "any": [
+      "60%|75%"
+     ]
+    },
+    {
+     "id": "assert",
+     "text": "coverage doesn't prove assertions",
+     "any": [
+      "assertion"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ai-cheat",
+   "pack": "testing-qa",
+   "refs": [
+    "testing/coverage-ai-code"
+   ],
+   "prompt": "An AI agent fixed a failing CI build. The diff touches the code, two test files and the coverage config.",
+   "rubric": [
+    {
+     "id": "integrity",
+     "text": "run eos test-integrity",
+     "any": [
+      "test-integrity"
+     ]
+    },
+    {
+     "id": "threshold",
+     "text": "lowered thresholds / gate config need human approval",
+     "any": [
+      "threshold"
+     ]
+    },
+    {
+     "id": "special",
+     "text": "special-casing / hard-coded expected values",
+     "any": [
+      "special-case|hard-code"
+     ]
+    },
+    {
+     "id": "tests-first",
+     "text": "read the test diff before the code diff",
+     "any": [
+      "diff of tests|test diff"
+     ]
+    },
+    {
+     "id": "evidence",
+     "text": "evidence that agents cheat (ImpossibleBench/METR); instructions alone don't stop it",
+     "any": [
+      "ImpossibleBench|METR"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "llm-evals",
+   "pack": "agent-security",
+   "refs": [
+    "testing/llm-evals"
+   ],
+   "prompt": "We changed the system prompt of our support chatbot. How do we test it before shipping?",
+   "rubric": [
+    {
+     "id": "dataset",
+     "text": "eval dataset representative of production",
+     "any": [
+      "dataset"
+     ]
+    },
+    {
+     "id": "code",
+     "text": "code graders first",
+     "any": [
+      "code.graded|code grader|Code \\|"
+     ]
+    },
+    {
+     "id": "judge",
+     "text": "LLM judge with rubric, calibrated with humans",
+     "any": [
+      "rubric"
+     ]
+    },
+    {
+     "id": "rate",
+     "text": "pass rate over multiple runs; non-determinism",
+     "any": [
+      "pass rate"
+     ]
+    },
+    {
+     "id": "heldout",
+     "text": "held-out set; avoid overfitting",
+     "any": [
+      "held-out"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "mobile-release",
+   "pack": "mobile",
+   "refs": [
+    "testing/mobile-qa"
+   ],
+   "prompt": "I'm a solo developer shipping a Flutter app update with a new payment screen next week. What testing should I do?",
+   "rubric": [
+    {
+     "id": "e2e",
+     "text": "Maestro or integration_test smoke flows",
+     "any": [
+      "maestro|integration_test"
+     ]
+    },
+    {
+     "id": "device",
+     "text": "real low-end Android device",
+     "any": [
+      "low-end|real device"
+     ]
+    },
+    {
+     "id": "ftl",
+     "text": "Firebase Test Lab deprecated",
+     "any": [
+      "deprecated"
+     ]
+    },
+    {
+     "id": "charter",
+     "text": "exploratory charter session",
+     "any": [
+      "charter"
+     ]
+    },
+    {
+     "id": "checklist",
+     "text": "release checklist incl. rollback",
+     "any": [
+      "checklist"
+     ]
+    }
+   ]
+  }
+ ]
+}

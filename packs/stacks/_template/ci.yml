@@ -1,0 +1,27 @@
+# engineering-os stack CI template. Replace STACK_ID and commands; keep permissions minimal.
+name: ci-STACK_ID
+on:
+  pull_request:
+    paths: ["**/*.EXT", ".github/workflows/ci-STACK_ID.yml"]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # - uses: <official setup action for the toolchain>
+      - name: Lint
+        run: echo "LINT_COMMAND"
+      - name: Types / compile
+        run: echo "TYPECHECK_COMMAND"
+      - name: Tests
+        run: echo "TEST_COMMAND"

@@ -1,0 +1,16 @@
+# Paths agents must not edit without explicit human instruction (gitignore-style globs).
+# Prefix with "tracked:" to protect only files already committed (new files are allowed).
+.eos/**
+.github/workflows/**
+.pre-commit-config.yaml
+**/*.lock
+**/uv.lock
+**/pnpm-lock.yaml
+**/package-lock.json
+**/yarn.lock
+tracked:**/migrations/**
+tracked:**/alembic/versions/**
+CODEOWNERS
+.github/CODEOWNERS
+tracked:docs/adr/0*.md
+!docs/adr/0000-template.md

@@ -1,0 +1,585 @@
+{
+ "version": "0.7.0-dev",
+ "date": "2026-10-10",
+ "always_on_session_start": {
+  "before_library": {
+   "Cursor": 1884,
+   "Cline": 1860,
+   "Claude Code": 1907,
+   "Codex": 1397
+  },
+  "after": {
+   "Cursor": 1884,
+   "Cline": 1860,
+   "Claude Code": 1907,
+   "Codex": 1397
+  }
+ },
+ "path_rules_route_py": {
+  "before": {
+   "Cursor": 2864,
+   "Cline": 2899,
+   "Claude Code": 2899
+  },
+  "after": {
+   "Cursor": 2872,
+   "Cline": 2907,
+   "Claude Code": 2907
+  }
+ },
+ "path_rules_page_tsx": {
+  "before": {
+   "Cursor": 2256,
+   "Cline": 2277,
+   "Claude Code": 2277
+  },
+  "after": {
+   "Cursor": 2256,
+   "Cline": 2277,
+   "Claude Code": 2277
+  }
+ },
+ "library_eval": [
+  {
+   "task": "orders-n-plus-one",
+   "tokens_base": 1181,
+   "tokens_lib": 5108,
+   "coverage_base": 0.125,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "order-payment-outbox",
+   "tokens_base": 1038,
+   "tokens_lib": 4760,
+   "coverage_base": 0.1111111111111111,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "product-page-cache",
+   "tokens_base": 1181,
+   "tokens_lib": 2926,
+   "coverage_base": 0.1111111111111111,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "connection-exhaustion",
+   "tokens_base": 1181,
+   "tokens_lib": 3292,
+   "coverage_base": 0.14285714285714285,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "retry-storm",
+   "tokens_base": 1038,
+   "tokens_lib": 3045,
+   "coverage_base": 0.1111111111111111,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "microservices-proposal",
+   "tokens_base": 1038,
+   "tokens_lib": 4529,
+   "coverage_base": 0.25,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "queue-design",
+   "tokens_base": 1088,
+   "tokens_lib": 2959,
+   "coverage_base": 0.375,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "cost-estimate",
+   "tokens_base": 1038,
+   "tokens_lib": 2682,
+   "coverage_base": 0.0,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "momo-webhook",
+   "tokens_base": 1194,
+   "tokens_lib": 3306,
+   "coverage_base": 0.14285714285714285,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "idempotent-transfer",
+   "tokens_base": 1194,
+   "tokens_lib": 3306,
+   "coverage_base": 0.4,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "spa-login",
+   "tokens_base": 1194,
+   "tokens_lib": 4599,
+   "coverage_base": 0.16666666666666666,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "jwt-verify",
+   "tokens_base": 1194,
+   "tokens_lib": 2794,
+   "coverage_base": 0.2,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "idor-invoices",
+   "tokens_base": 968,
+   "tokens_lib": 2744,
+   "coverage_base": 0.16666666666666666,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "url-preview",
+   "tokens_base": 1088,
+   "tokens_lib": 2767,
+   "coverage_base": 0.0,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "password-policy",
+   "tokens_base": 1194,
+   "tokens_lib": 2999,
+   "coverage_base": 0.0,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "add-dependency",
+   "tokens_base": 1194,
+   "tokens_lib": 2981,
+   "coverage_base": 1.0,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "email-agent",
+   "tokens_base": 1139,
+   "tokens_lib": 3237,
+   "coverage_base": 0.8333333333333334,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "mcp-server",
+   "tokens_base": 1139,
+   "tokens_lib": 3237,
+   "coverage_base": 0.0,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "kyc-data",
+   "tokens_base": 968,
+   "tokens_lib": 2701,
+   "coverage_base": 0.16666666666666666,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  },
+  {
+   "task": "pci-checkout",
+   "tokens_base": 1194,
+   "tokens_lib": 5114,
+   "coverage_base": 0.25,
+   "coverage_lib": 1.0,
+   "missing_lib": []
+  }
+ ],
+ "notes": "Context coverage is a proxy (rubric and refs share an author). No agent CLI or API key exists in the build box, so no live agent run; `eos library eval --responses DIR` scores real answers when someone runs the tasks.",
+ "security_stage2": {
+  "tasks": 12,
+  "mean_tokens_base": 1138,
+  "mean_tokens_lib": 3315,
+  "mean_coverage_base": 0.277,
+  "mean_coverage_lib": 1.0,
+  "always_on_after_stage2": {
+   "session_start": {
+    "Cursor": 1884,
+    "Cline": 1860,
+    "Claude Code": 1907,
+    "Codex": 1397
+   },
+   "path_rules_route_py": {
+    "Cursor": 2872,
+    "Cline": 2907,
+    "Claude Code": 2907
+   },
+   "path_rules_page_tsx": {
+    "Cursor": 2256,
+    "Cline": 2277,
+    "Claude Code": 2277
+   }
+  }
+ },
+ "data_stage3": {
+  "tasks": 14,
+  "mean_tokens_base": 1048,
+  "mean_tokens_lib": 3950,
+  "mean_coverage_base": 0.346,
+  "mean_coverage_lib": 1.0,
+  "always_on_after_stage3": {
+   "session_start": {
+    "Cursor": 1884,
+    "Cline": 1860,
+    "Claude Code": 1907,
+    "Codex": 1397
+   },
+   "path_rules_route_py": {
+    "Cursor": 2872,
+    "Cline": 2907,
+    "Claude Code": 2907
+   },
+   "path_rules_page_tsx": {
+    "Cursor": 2256,
+    "Cline": 2277,
+    "Claude Code": 2277
+   }
+  }
+ },
+ "api_stage4": {
+  "tasks": 14,
+  "mean_tokens_base": 1036,
+  "mean_tokens_lib": 3581,
+  "mean_coverage_base": 0.27,
+  "mean_coverage_lib": 1.0,
+  "always_on_after_stage4": {
+   "session_start": {
+    "Cursor": 1884,
+    "Cline": 1860,
+    "Claude Code": 1907,
+    "Codex": 1397
+   },
+   "path_rules_route_py": {
+    "Cursor": 2864,
+    "Cline": 2899,
+    "Claude Code": 2899
+   },
+   "path_rules_page_tsx": {
+    "Cursor": 2256,
+    "Cline": 2277,
+    "Claude Code": 2277
+   }
+  },
+  "note": "route_py fell by 8 tokens: the api-design Automated checks section (part of the edit-time rule slice) was shortened while pointing to the new scaffold."
+ },
+ "testing_stage5": {
+  "tasks": 15,
+  "mean_tokens_base": 1141,
+  "mean_tokens_lib": 2626,
+  "mean_coverage_base": 0.44,
+  "mean_coverage_lib": 1.0,
+  "always_on_after_stage5": {
+   "session_start": {
+    "Cursor": 1884,
+    "Cline": 1860,
+    "Claude Code": 1907,
+    "Codex": 1397
+   },
+   "path_rules_route_py": {
+    "Cursor": 2864,
+    "Cline": 2899,
+    "Claude Code": 2899
+   },
+   "path_rules_page_tsx": {
+    "Cursor": 2256,
+    "Cline": 2277,
+    "Claude Code": 2277
+   }
+  },
+  "note": "Unchanged from stage 4. Lane text gained a few words (quarantine expiry, changed-line coverage, CI mutation) but is printed only by `eos lane` on demand, not at session start. performance-scale pack trimmed one phrase to fit a pointer (1,199/1,200)."
+ },
+ "ops_stage6": {
+  "tasks": 19,
+  "mean_tokens_base": 1002,
+  "mean_tokens_lib": 2782,
+  "mean_coverage_base": 0.51,
+  "mean_coverage_lib": 1.0,
+  "always_on_after_stage6": {
+   "session_start": {
+    "Cursor": 1884,
+    "Cline": 1860,
+    "Claude Code": 1907,
+    "Codex": 1397
+   },
+   "path_rules_route_py": {
+    "Cursor": 2864,
+    "Cline": 2899,
+    "Claude Code": 2899
+   },
+   "path_rules_page_tsx": {
+    "Cursor": 2256,
+    "Cline": 2277,
+    "Claude Code": 2277
+   }
+  },
+  "note": "Unchanged from stage 5. Ops gates run in-process in the standard lane only when ops/slo.json, alert rules or ops/flags.json exist; hadolint (risky/--full) and checkov (--full) only when installed. Pointers added to operations (994), infra-devops (1,054), release (905) and architecture (1,087) packs; rule slices unchanged."
+ },
+ "frontend_stage7": {
+  "tasks": 20,
+  "mean_tokens_base": 1099,
+  "mean_tokens_lib": 3020,
+  "mean_coverage_base": 0.44,
+  "mean_coverage_lib": 1.0,
+  "always_on_after_stage7": {
+   "session_start": {
+    "Cursor": 1884,
+    "Cline": 1860,
+    "Claude Code": 1907,
+    "Codex": 1397
+   },
+   "path_rules_route_py": {
+    "Cursor": 2864,
+    "Cline": 2899,
+    "Claude Code": 2899
+   },
+   "path_rules_page_tsx": {
+    "Cursor": 2240,
+    "Cline": 2261,
+    "Claude Code": 2261
+   }
+  },
+  "note": "Session start and route_py unchanged; page_tsx down 16 tokens (frontend slice trimmed while adding automated-check lines). i18n check runs in-process in the standard lane only when catalogs exist; the gzip bundle ratchet runs in risky/--full only when a build output is newer than the changed web files. Pointers added to frontend (1,099), security (1,197), performance-scale (1,196), testing-qa (1,168), mobile (930) and design-direction (1,181) packs. Fixture run (create-next-app 16.4.0, box Chrome): LHCI median LCP 1,812 ms, TBT 71 ms, CLS 0, script 143,526 B: all inside the scaffold budgets; one lab run on this box, not a field measurement."
+ },
+ "design_stage8": {
+  "tasks": 20,
+  "mean_tokens_base": 1073,
+  "mean_tokens_lib": 2942,
+  "mean_coverage_base": 0.48,
+  "mean_coverage_lib": 1.0,
+  "always_on_after_stage8": {
+   "session_start": {
+    "Cursor": 1884,
+    "Cline": 1860,
+    "Claude Code": 1907,
+    "Codex": 1397
+   },
+   "path_rules_route_py": {
+    "Cursor": 2864,
+    "Cline": 2899,
+    "Claude Code": 2899
+   },
+   "path_rules_page_tsx": {
+    "Cursor": 2240,
+    "Cline": 2261,
+    "Claude Code": 2261
+   }
+  },
+  "note": "Always-on unchanged (session start, route_py and page_tsx identical to stage 7; skill descriptions untouched). 12 design refs (packs/ref/design/). Pointers: design-direction (1,184), ux-design (855), mobile (944), frontend (1,114). New gate `eos design check` (DTCG 2025.10 schema, WCAG 2 contrast on token and CSS theme pairs, generic-look lint) runs in-process in `eos verify` (standard lane: changed UI/token files; risky/--full: whole repo) and in `eos check`. Style Dictionary 5.6.1 contract test builds the scaffold to CSS/JS/Dart. Coverage is an availability proxy; rubric and refs share an author."
+ },
+ "design_studio": {
+  "date": "2026-10-10",
+  "method": "tests/bench/studio_static_eval.py (static; no LLM on the box). Tailwind v3 colours from https://unpkg.com/tailwindcss@3.4.17/lib/public/colors.js (241 hexes, not committed). Coverage = paragraphs/CSV rows matching a few keywords per rubric row: a 'mentions it' proxy, not quality.",
+  "uupm_palettes": {
+   "palettes": 192,
+   "violet_key_colour": 45,
+   "stock_tailwind_key_colour": 189,
+   "on_pairs_checked": 1344,
+   "on_pairs_pass_4_5": 1344,
+   "fails_by_pair": {}
+  },
+  "uupm_fonts": {
+   "pairings": 74,
+   "with_default_family": 16,
+   "with_inter": 8
+  },
+  "spec_palettes": {
+   "01-sme-cash-dashboard": {
+    "query": "fintech cash dashboard small business mobile money",
+    "style": "Minimalism & Swiss Style",
+    "heading_font": "Calistoga",
+    "body_font": "Inter",
+    "colours": 19,
+    "contrast_errors": 0,
+    "warnings": [
+     "color.accent #8b5cf6 is violet/purple (hue 293): a generic AI tell in our refs",
+     "color.cta #8b5cf6 is violet/purple (hue 293): a generic AI tell in our refs",
+     "suggested fonts include default/AI-typical families (inter): choose on purpose"
+    ]
+   },
+   "02-mobile-money-payment": {
+    "query": "mobile money bill payment wallet",
+    "style": "Flat Design",
+    "heading_font": "Inter",
+    "body_font": "Playfair Display",
+    "colours": 19,
+    "contrast_errors": 0,
+    "warnings": [
+     "suggested fonts include default/AI-typical families (inter): choose on purpose"
+    ]
+   },
+   "03-landing-page": {
+    "query": "savings group community finance app landing page",
+    "style": "Glassmorphism",
+    "heading_font": "Lexend",
+    "body_font": "Source Sans 3",
+    "colours": 18,
+    "contrast_errors": 0,
+    "warnings": []
+   }
+  },
+  "rubric_coverage": {
+   "units": {
+    "ours": 173,
+    "impeccable-knowledge": 1623,
+    "ui-ux-pro-max-knowledge": 4430,
+    "emil-review-animations": 94
+   },
+   "rows": {
+    "1": {
+     "ours": 30,
+     "impeccable-knowledge": 96,
+     "ui-ux-pro-max-knowledge": 38,
+     "emil-review-animations": 4
+    },
+    "2": {
+     "ours": 15,
+     "impeccable-knowledge": 30,
+     "ui-ux-pro-max-knowledge": 28,
+     "emil-review-animations": 0
+    },
+    "3": {
+     "ours": 20,
+     "impeccable-knowledge": 61,
+     "ui-ux-pro-max-knowledge": 122,
+     "emil-review-animations": 2
+    },
+    "4": {
+     "ours": 15,
+     "impeccable-knowledge": 71,
+     "ui-ux-pro-max-knowledge": 200,
+     "emil-review-animations": 1
+    },
+    "5": {
+     "ours": 36,
+     "impeccable-knowledge": 76,
+     "ui-ux-pro-max-knowledge": 292,
+     "emil-review-animations": 2
+    },
+    "6": {
+     "ours": 32,
+     "impeccable-knowledge": 127,
+     "ui-ux-pro-max-knowledge": 851,
+     "emil-review-animations": 6
+    },
+    "7": {
+     "ours": 14,
+     "impeccable-knowledge": 61,
+     "ui-ux-pro-max-knowledge": 112,
+     "emil-review-animations": 0
+    },
+    "8": {
+     "ours": 23,
+     "impeccable-knowledge": 46,
+     "ui-ux-pro-max-knowledge": 67,
+     "emil-review-animations": 1
+    },
+    "9": {
+     "ours": 29,
+     "impeccable-knowledge": 120,
+     "ui-ux-pro-max-knowledge": 570,
+     "emil-review-animations": 36
+    },
+    "10": {
+     "ours": 58,
+     "impeccable-knowledge": 157,
+     "ui-ux-pro-max-knowledge": 1116,
+     "emil-review-animations": 10
+    },
+    "11": {
+     "ours": 21,
+     "impeccable-knowledge": 10,
+     "ui-ux-pro-max-knowledge": 17,
+     "emil-review-animations": 0
+    },
+    "12": {
+     "ours": 14,
+     "impeccable-knowledge": 68,
+     "ui-ux-pro-max-knowledge": 87,
+     "emil-review-animations": 0
+    }
+   }
+  },
+  "ab_live": "not run here (no agent/LLM on the box); harness: eos design ab init|score|report"
+ },
+ "data_ml_stage11": {
+  "tasks": 27,
+  "analytics": {
+   "tasks": 14,
+   "mean_tokens_base": 1088,
+   "mean_tokens_lib": 3124,
+   "mean_coverage_base": 0.33,
+   "mean_coverage_lib": 1.0
+  },
+  "ml": {
+   "tasks": 13,
+   "mean_tokens_base": 1088,
+   "mean_tokens_lib": 3055,
+   "mean_coverage_base": 0.58,
+   "mean_coverage_lib": 1.0
+  },
+  "always_on_after_stage11": {
+   "session_start": {
+    "Cursor": 1884,
+    "Cline": 1860,
+    "Claude Code": 1907,
+    "Codex": 1397
+   },
+   "path_rules_route_py": {
+    "Cursor": 2864,
+    "Cline": 2899,
+    "Claude Code": 2899
+   },
+   "path_rules_page_tsx": {
+    "Cursor": 2240,
+    "Cline": 2261,
+    "Claude Code": 2261
+   }
+  },
+  "note": "Always-on unchanged. 7 analytics + 5 ml refs, no new pack (pointers from data-ml, 1,088 tokens). New gates: `eos data check` (ODCS contracts, breaking changes vs base, notebooks), `eos data split` (split leakage); scaffolds analytics (dbt + DuckDB, real build tested) and ml."
+ },
+ "library_v0_7_0": {
+  "date": "2026-10-11",
+  "areas": 12,
+  "ref_files": 134,
+  "eval_tasks": 189,
+  "mean_tokens_base": 1089,
+  "mean_tokens_lib": 3218,
+  "mean_coverage_base": 0.41,
+  "mean_coverage_lib": 1.0,
+  "always_on": {
+   "session_start": {
+    "Cursor": 1884,
+    "Cline": 1860,
+    "Claude Code": 1907,
+    "Codex": 1397
+   },
+   "path_rules_route_py": {
+    "Cursor": 2864,
+    "Cline": 2899,
+    "Claude Code": 2899
+   },
+   "path_rules_page_tsx": {
+    "Cursor": 2240,
+    "Cline": 2261,
+    "Claude Code": 2261
+   }
+  },
+  "note": "Wrap-up: every eval file run together (`eos library eval tests/evals`). Coverage is a proxy; no live agent run."
+ }
+}

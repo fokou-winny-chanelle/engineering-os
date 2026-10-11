@@ -1,0 +1,471 @@
+{
+ "about": "Eval tasks for the classic ML library (stage 11). Same method as the other eval files: context coverage (pack vs pack+refs) is an availability proxy, not proof of better answers; rubric and refs share an author. Score real agent answers with --responses DIR.",
+ "tasks": [
+  {
+   "id": "need-ml",
+   "pack": "data-ml",
+   "refs": [
+    "ml/framing-splits-leakage"
+   ],
+   "prompt": "The CEO wants 'AI for fraud'. Where do we start?",
+   "rubric": [
+    {
+     "id": "decision",
+     "text": "frame the decision and cost of errors",
+     "any": [
+      "decision|cost"
+     ]
+    },
+    {
+     "id": "baseline",
+     "text": "heuristic/rule baseline first",
+     "any": [
+      "heuristic|baseline|rule"
+     ]
+    },
+    {
+     "id": "metric",
+     "text": "metric matches the decision (precision/recall, PR)",
+     "any": [
+      "precision|recall|PR"
+     ]
+    },
+    {
+     "id": "rules-of-ml",
+     "text": "Rules of ML cited",
+     "any": [
+      "Rules of ML|Rule #"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "split-leakage",
+   "pack": "data-ml",
+   "refs": [
+    "ml/framing-splits-leakage"
+   ],
+   "prompt": "Our fraud model has 0.99 AUC offline and is useless in production. Why?",
+   "rubric": [
+    {
+     "id": "leak",
+     "text": "leakage",
+     "any": [
+      "leak"
+     ]
+    },
+    {
+     "id": "time",
+     "text": "time-based split with gap",
+     "any": [
+      "time|[Tt]emporal"
+     ]
+    },
+    {
+     "id": "group",
+     "text": "group split by entity (GroupKFold)",
+     "any": [
+      "Group"
+     ]
+    },
+    {
+     "id": "pipeline",
+     "text": "fit preprocessing on train only (Pipeline)",
+     "any": [
+      "Pipeline|fit"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "split-tool",
+   "pack": "data-ml",
+   "refs": [
+    "ml/framing-splits-leakage"
+   ],
+   "prompt": "How can CI catch leakage in our train/test files?",
+   "rubric": [
+    {
+     "id": "split",
+     "text": "eos data split",
+     "any": [
+      "eos data split"
+     ]
+    },
+    {
+     "id": "ids",
+     "text": "shared ids across splits",
+     "any": [
+      "shared|id"
+     ]
+    },
+    {
+     "id": "checklist",
+     "text": "split checklist from eos scaffold ml",
+     "any": [
+      "checklist"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "imbalanced",
+   "pack": "data-ml",
+   "refs": [
+    "ml/framing-splits-leakage"
+   ],
+   "prompt": "Fraud is 0.2% of transactions. Our model is 99.8% accurate. Good?",
+   "rubric": [
+    {
+     "id": "accuracy",
+     "text": "accuracy misleading for imbalance",
+     "any": [
+      "accuracy|[Ii]mbalanc"
+     ]
+    },
+    {
+     "id": "pr",
+     "text": "precision-recall / PR curve",
+     "any": [
+      "[Pp]recision"
+     ]
+    },
+    {
+     "id": "threshold",
+     "text": "choose operating threshold by cost",
+     "any": [
+      "threshold"
+     ]
+    },
+    {
+     "id": "calib",
+     "text": "calibration / Brier",
+     "any": [
+      "[Cc]alibrat|Brier"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "experiment-tracking",
+   "pack": "data-ml",
+   "refs": [
+    "ml/experiments-reproducibility"
+   ],
+   "prompt": "Nobody can reproduce last quarter's credit model. What do we put in place?",
+   "rubric": [
+    {
+     "id": "track",
+     "text": "experiment tracking (MLflow)",
+     "any": [
+      "MLflow"
+     ]
+    },
+    {
+     "id": "data",
+     "text": "data version pinned (DVC/lakeFS/snapshot)",
+     "any": [
+      "DVC|lakeFS|snapshot"
+     ]
+    },
+    {
+     "id": "seed",
+     "text": "seeds and environment pinned",
+     "any": [
+      "seed|lock"
+     ]
+    },
+    {
+     "id": "registry",
+     "text": "model registry aliases",
+     "any": [
+      "alias|registry"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lakefs-licence",
+   "pack": "data-ml",
+   "refs": [
+    "ml/experiments-reproducibility"
+   ],
+   "prompt": "Can we use lakeFS and DVC freely?",
+   "rubric": [
+    {
+     "id": "bsl",
+     "text": "lakeFS server under Business Source License",
+     "any": [
+      "Business Source|BSL"
+     ]
+    },
+    {
+     "id": "dvc",
+     "text": "DVC Apache-2.0",
+     "any": [
+      "Apache"
+     ]
+    },
+    {
+     "id": "git",
+     "text": "DVC works with git",
+     "any": [
+      "git"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "model-card",
+   "pack": "data-ml",
+   "refs": [
+    "ml/experiments-reproducibility"
+   ],
+   "prompt": "What documentation should ship with each model?",
+   "rubric": [
+    {
+     "id": "card",
+     "text": "model card",
+     "any": [
+      "[Mm]odel card"
+     ]
+    },
+    {
+     "id": "datasheet",
+     "text": "datasheet for the dataset",
+     "any": [
+      "[Dd]atasheet"
+     ]
+    },
+    {
+     "id": "slices",
+     "text": "metrics by slice/segment",
+     "any": [
+      "slice|segment"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "batch-vs-online",
+   "pack": "data-ml",
+   "refs": [
+    "ml/serving-monitoring"
+   ],
+   "prompt": "Should our churn model and our fraud model be served in batch or online?",
+   "rubric": [
+    {
+     "id": "batch",
+     "text": "batch when decisions can wait",
+     "any": [
+      "[Bb]atch"
+     ]
+    },
+    {
+     "id": "online",
+     "text": "online for in-flow decisions with latency budget",
+     "any": [
+      "[Oo]nline|latency"
+     ]
+    },
+    {
+     "id": "skew",
+     "text": "training-serving skew",
+     "any": [
+      "skew"
+     ]
+    },
+    {
+     "id": "shadow",
+     "text": "shadow/canary release",
+     "any": [
+      "shadow|canary"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "drift",
+   "pack": "data-ml",
+   "refs": [
+    "ml/serving-monitoring"
+   ],
+   "prompt": "Chargeback labels take 60 days. How do we know the fraud model still works?",
+   "rubric": [
+    {
+     "id": "delay",
+     "text": "delayed labels",
+     "any": [
+      "[Dd]elay"
+     ]
+    },
+    {
+     "id": "drift",
+     "text": "input/prediction drift monitoring",
+     "any": [
+      "drift"
+     ]
+    },
+    {
+     "id": "evidently",
+     "text": "Evidently tests and defaults",
+     "any": [
+      "Evidently"
+     ]
+    },
+    {
+     "id": "nannyml",
+     "text": "performance estimation caveat (NannyML)",
+     "any": [
+      "NannyML"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "retrain",
+   "pack": "data-ml",
+   "refs": [
+    "ml/serving-monitoring"
+   ],
+   "prompt": "Should we retrain the model every night automatically?",
+   "rubric": [
+    {
+     "id": "trigger",
+     "text": "retrain on a trigger or schedule with evaluation gate",
+     "any": [
+      "trigger|schedule"
+     ]
+    },
+    {
+     "id": "gate",
+     "text": "compare against the champion before promotion",
+     "any": [
+      "champion|gate"
+     ]
+    },
+    {
+     "id": "rollback",
+     "text": "rollback path",
+     "any": [
+      "rollback|roll back"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "credit-fairness",
+   "pack": "data-ml",
+   "refs": [
+    "ml/fintech-risk"
+   ],
+   "prompt": "We're building a credit score for micro-loans in Cameroon and want to sell into the EU later. What rules apply?",
+   "rubric": [
+    {
+     "id": "cameroon",
+     "text": "Cameroon Law 2024/017 Section 44 automated decisions",
+     "any": [
+      "44|2024/017"
+     ]
+    },
+    {
+     "id": "aiact",
+     "text": "EU AI Act high-risk (Annex III), dates after Digital Omnibus",
+     "any": [
+      "Annex III|AI Act"
+     ]
+    },
+    {
+     "id": "schufa",
+     "text": "CJEU SCHUFA: score can be an automated decision",
+     "any": [
+      "SCHUFA"
+     ]
+    },
+    {
+     "id": "fair",
+     "text": "fairness metrics conflict (Kleinberg/Chouldechova)",
+     "any": [
+      "Kleinberg|Chouldechova|incompatib"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "adverse-action",
+   "pack": "data-ml",
+   "refs": [
+    "ml/fintech-risk"
+   ],
+   "prompt": "Can we use SHAP values as the reasons we give to rejected loan applicants?",
+   "rubric": [
+    {
+     "id": "regb",
+     "text": "Regulation B specific reasons",
+     "any": [
+      "Regulation B|1002\\.9"
+     ]
+    },
+    {
+     "id": "cfpb",
+     "text": "CFPB circular withdrawn noted",
+     "any": [
+      "withdrawn"
+     ]
+    },
+    {
+     "id": "shap",
+     "text": "SHAP is not causal",
+     "any": [
+      "causal"
+     ]
+    },
+    {
+     "id": "human",
+     "text": "human review/contest",
+     "any": [
+      "human"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "notebooks",
+   "pack": "data-ml",
+   "refs": [
+    "ml/notebooks-production"
+   ],
+   "prompt": "Our data scientists commit notebooks with outputs and hand them to engineering to 'put in production'. Fix the workflow.",
+   "rubric": [
+    {
+     "id": "strip",
+     "text": "strip outputs (nbstripout)",
+     "any": [
+      "nbstripout"
+     ]
+    },
+    {
+     "id": "modules",
+     "text": "move logic into tested modules",
+     "any": [
+      "module"
+     ]
+    },
+    {
+     "id": "jupytext",
+     "text": "Jupytext/paired scripts or papermill",
+     "any": [
+      "Jupytext|papermill"
+     ]
+    },
+    {
+     "id": "check",
+     "text": "eos data check NB001",
+     "any": [
+      "NB001|eos data check"
+     ]
+    }
+   ]
+  }
+ ]
+}

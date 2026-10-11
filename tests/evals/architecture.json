@@ -1,0 +1,550 @@
+{
+ "about": "Eval tasks for the architecture library. eos library eval tests/evals measures tokens and rubric coverage of the loaded context (pack vs pack+refs); with --responses DIR it scores real agent answers (<task>.base.md / <task>.lib.md) with the same rubric. Rubric and refs were written by the same author: treat context coverage as an availability proxy, not proof of better answers.",
+ "tasks": [
+  {
+   "id": "orders-n-plus-one",
+   "pack": "performance-scale",
+   "refs": [
+    "architecture/api-performance",
+    "architecture/database-scaling"
+   ],
+   "prompt": "GET /orders (50 per page) takes 1.8 s; DB CPU is fine. Diagnose and fix.",
+   "rubric": [
+    {
+     "id": "trace",
+     "text": "count queries per request / trace first",
+     "any": [
+      "count(s|ing)? queries|queries per request|trace"
+     ]
+    },
+    {
+     "id": "eager",
+     "text": "eager-load the relation with the ORM's batch loader",
+     "any": [
+      "selectinload|prefetch_related|select_related|joinedload|DataLoader"
+     ]
+    },
+    {
+     "id": "raise",
+     "text": "make lazy loads fail in tests",
+     "any": [
+      "raiseload|lazy=\\\"raise\\\""
+     ]
+    },
+    {
+     "id": "count-test",
+     "text": "query-count assertion in tests",
+     "any": [
+      "assertNumQueries|query-count assertion"
+     ]
+    },
+    {
+     "id": "keyset",
+     "text": "cursor/keyset pagination instead of OFFSET",
+     "any": [
+      "keyset|seek method"
+     ]
+    },
+    {
+     "id": "composite",
+     "text": "composite index matching filter + sort",
+     "any": [
+      "composite index"
+     ]
+    },
+    {
+     "id": "explain",
+     "text": "read the plan",
+     "any": [
+      "EXPLAIN \\(ANALYZE"
+     ]
+    },
+    {
+     "id": "pgss",
+     "text": "find top queries with pg_stat_statements",
+     "any": [
+      "pg_stat_statements"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "order-payment-outbox",
+   "pack": "architecture",
+   "refs": [
+    "architecture/service-communication",
+    "architecture/data-consistency"
+   ],
+   "prompt": "Orders, payments and inventory are separate services. Design order placement so nobody is charged for an order that can't ship.",
+   "rubric": [
+    {
+     "id": "outbox",
+     "text": "transactional outbox for DB write + publish",
+     "any": [
+      "outbox"
+     ]
+    },
+    {
+     "id": "idem",
+     "text": "idempotency key on the charge",
+     "any": [
+      "idempotency key"
+     ]
+    },
+    {
+     "id": "alo",
+     "text": "assume at-least-once delivery",
+     "any": [
+      "at-least-once"
+     ]
+    },
+    {
+     "id": "dedupe",
+     "text": "consumer dedupe / inbox table",
+     "any": [
+      "inbox|dedupe"
+     ]
+    },
+    {
+     "id": "relay",
+     "text": "relay via SKIP LOCKED polling or CDC",
+     "any": [
+      "SKIP LOCKED|Debezium|change data capture"
+     ]
+    },
+    {
+     "id": "saga",
+     "text": "orchestrated saga with compensations",
+     "any": [
+      "orchestrat"
+     ]
+    },
+    {
+     "id": "pivot",
+     "text": "pivot step ordering",
+     "any": [
+      "pivot"
+     ]
+    },
+    {
+     "id": "no2pc",
+     "text": "no 2PC/XA across services",
+     "any": [
+      "two-phase commit|2PC|XA"
+     ]
+    },
+    {
+     "id": "isolation",
+     "text": "sagas lack isolation: semantic locks / PENDING",
+     "any": [
+      "semantic lock|no isolation"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "product-page-cache",
+   "pack": "performance-scale",
+   "refs": [
+    "architecture/caching"
+   ],
+   "prompt": "Product pages are slow under launch traffic; prices change a few times a day. Add caching.",
+   "rubric": [
+    {
+     "id": "swr",
+     "text": "stale-while-revalidate",
+     "any": [
+      "stale-while-revalidate"
+     ]
+    },
+    {
+     "id": "sie",
+     "text": "stale-if-error",
+     "any": [
+      "stale-if-error"
+     ]
+    },
+    {
+     "id": "smaxage",
+     "text": "s-maxage for the CDN",
+     "any": [
+      "s-maxage"
+     ]
+    },
+    {
+     "id": "delete",
+     "text": "delete the key on write, not set",
+     "any": [
+      "delete the key|then delete"
+     ]
+    },
+    {
+     "id": "stampede",
+     "text": "stampede protection",
+     "any": [
+      "stampede|single-flight|coalesc"
+     ]
+    },
+    {
+     "id": "jitter",
+     "text": "TTL jitter",
+     "any": [
+      "jitter"
+     ]
+    },
+    {
+     "id": "vary",
+     "text": "Vary header correctness",
+     "any": [
+      "\\bVary\\b"
+     ]
+    },
+    {
+     "id": "private",
+     "text": "private/no-store for personalised data",
+     "any": [
+      "no-store|private"
+     ]
+    },
+    {
+     "id": "cold",
+     "text": "survive an empty/down cache",
+     "any": [
+      "cold cache|cache (is )?empty|unreachable"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "connection-exhaustion",
+   "pack": "performance-scale",
+   "refs": [
+    "architecture/database-scaling"
+   ],
+   "prompt": "After scaling web pods from 5 to 20, Postgres refuses connections at peak. Fix it.",
+   "rubric": [
+    {
+     "id": "max",
+     "text": "know max_connections default (~100)",
+     "any": [
+      "max_connections"
+     ]
+    },
+    {
+     "id": "math",
+     "text": "instances x pool size must fit",
+     "any": [
+      "instances ?[×x\\*] ?pool|pods ?[×x\\*] ?pool"
+     ]
+    },
+    {
+     "id": "formula",
+     "text": "small pools; HikariCP formula",
+     "any": [
+      "core_count"
+     ]
+    },
+    {
+     "id": "pooler",
+     "text": "external pooler (PgBouncer/RDS Proxy)",
+     "any": [
+      "PgBouncer|RDS Proxy"
+     ]
+    },
+    {
+     "id": "txmode",
+     "text": "transaction-pooling caveats",
+     "any": [
+      "LISTEN|advisory|PREPARE"
+     ]
+    },
+    {
+     "id": "stmt",
+     "text": "statement_timeout",
+     "any": [
+      "statement_timeout"
+     ]
+    },
+    {
+     "id": "idle",
+     "text": "idle_in_transaction_session_timeout",
+     "any": [
+      "idle_in_transaction"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "retry-storm",
+   "pack": "architecture",
+   "refs": [
+    "architecture/resilience"
+   ],
+   "prompt": "A slow downstream service caused a 40-minute outage across our stack. What do we change?",
+   "rubric": [
+    {
+     "id": "timeout-pct",
+     "text": "timeouts from a downstream latency percentile",
+     "any": [
+      "p99\\.9|percentile"
+     ]
+    },
+    {
+     "id": "deadline",
+     "text": "propagate deadlines",
+     "any": [
+      "deadline"
+     ]
+    },
+    {
+     "id": "jitter",
+     "text": "full jitter",
+     "any": [
+      "full jitter"
+     ]
+    },
+    {
+     "id": "budget",
+     "text": "retry budget / token bucket",
+     "any": [
+      "retry budget|token bucket"
+     ]
+    },
+    {
+     "id": "layer",
+     "text": "retry at one layer only (multiplication)",
+     "any": [
+      "one layer|27"
+     ]
+    },
+    {
+     "id": "breaker",
+     "text": "circuit breaker",
+     "any": [
+      "circuit breaker"
+     ]
+    },
+    {
+     "id": "shed",
+     "text": "load shedding / goodput",
+     "any": [
+      "load shedding|goodput"
+     ]
+    },
+    {
+     "id": "liveness",
+     "text": "liveness must not check dependencies",
+     "any": [
+      "liveness"
+     ]
+    },
+    {
+     "id": "fallback",
+     "text": "avoid rarely exercised fallbacks",
+     "any": [
+      "rarely exercised|never run outside incidents"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "microservices-proposal",
+   "pack": "architecture",
+   "refs": [
+    "architecture/scaling-stages",
+    "architecture/modular-monolith"
+   ],
+   "prompt": "Our 3-dev SaaS (300 customers) wants to move to microservices for scale. Advise.",
+   "rubric": [
+    {
+     "id": "monofirst",
+     "text": "monolith first evidence",
+     "any": [
+      "Monolith First|monolith first"
+     ]
+    },
+    {
+     "id": "capacity",
+     "text": "capacity model / measured limit",
+     "any": [
+      "capacity model|measured limit"
+     ]
+    },
+    {
+     "id": "reasons",
+     "text": "valid extraction reasons",
+     "any": [
+      "separate team|compliance|scaling profile|scale or deploy"
+     ]
+    },
+    {
+     "id": "boundary",
+     "text": "boundary lint (import-linter etc.)",
+     "any": [
+      "import-linter|dependency-cruiser|boundary lint"
+     ]
+    },
+    {
+     "id": "cheap",
+     "text": "cheap hard-to-retrofit stage-0 decisions",
+     "any": [
+      "hard to retrofit|tenant id"
+     ]
+    },
+    {
+     "id": "example",
+     "text": "a real scale example of a monolith",
+     "any": [
+      "Stack Overflow|Shopify"
+     ]
+    },
+    {
+     "id": "distmono",
+     "text": "distributed monolith anti-pattern",
+     "any": [
+      "distributed monolith"
+     ]
+    },
+    {
+     "id": "rollback",
+     "text": "ADR with cost and rollback",
+     "any": [
+      "roll ?back"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "queue-design",
+   "pack": "backend",
+   "refs": [
+    "architecture/event-driven"
+   ],
+   "prompt": "Add background generation of invoice PDFs that may take minutes. Design the job pipeline.",
+   "rubric": [
+    {
+     "id": "dlq",
+     "text": "DLQ with maxReceiveCount",
+     "any": [
+      "maxReceiveCount|dead-letter"
+     ]
+    },
+    {
+     "id": "vis",
+     "text": "visibility timeout > processing time (12 h cap)",
+     "any": [
+      "visibility timeout"
+     ]
+    },
+    {
+     "id": "idem",
+     "text": "idempotent consumer",
+     "any": [
+      "idempotent"
+     ]
+    },
+    {
+     "id": "order",
+     "text": "ordering per key only",
+     "any": [
+      "per key|ordering key|partition"
+     ]
+    },
+    {
+     "id": "lag",
+     "text": "alert on oldest-message age",
+     "any": [
+      "oldest[- ]message"
+     ]
+    },
+    {
+     "id": "skip",
+     "text": "DB-backed queue with SKIP LOCKED",
+     "any": [
+      "SKIP LOCKED"
+     ]
+    },
+    {
+     "id": "outbox",
+     "text": "publish through an outbox",
+     "any": [
+      "outbox"
+     ]
+    },
+    {
+     "id": "ackafter",
+     "text": "ack only after the effect commits",
+     "any": [
+      "ack only after|acking before"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cost-estimate",
+   "pack": "architecture",
+   "refs": [
+    "architecture/cost"
+   ],
+   "prompt": "Estimate monthly infra cost for our MVP and say what will drive it as we grow.",
+   "rubric": [
+    {
+     "id": "cite",
+     "text": "cite pricing pages with dates; no invented prices",
+     "any": [
+      "pricing page|cited"
+     ]
+    },
+    {
+     "id": "unit",
+     "text": "unit cost metric",
+     "any": [
+      "unit cost|per active user"
+     ]
+    },
+    {
+     "id": "egress",
+     "text": "data transfer / egress",
+     "any": [
+      "egress|data transfer"
+     ]
+    },
+    {
+     "id": "obs",
+     "text": "observability volume as a driver",
+     "any": [
+      "log ingestion|observability"
+     ]
+    },
+    {
+     "id": "nonprod",
+     "text": "stop non-prod outside hours",
+     "any": [
+      "non-production|dev/test"
+     ]
+    },
+    {
+     "id": "rightsize",
+     "text": "rightsize before commitments",
+     "any": [
+      "rightsiz"
+     ]
+    },
+    {
+     "id": "tags",
+     "text": "allocation tags + budget alerts",
+     "any": [
+      "tags|budget alert"
+     ]
+    },
+    {
+     "id": "managed",
+     "text": "managed vs self-run includes people cost",
+     "any": [
+      "on-call|people"
+     ]
+    }
+   ]
+  }
+ ]
+}

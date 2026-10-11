@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: fct_daily_payments
+    description: Daily payment totals per merchant. Published to consumers; see contracts/payments-daily.odcs.yaml.
+    config:
+      contract:
+        enforced: true  # dbt checks column names and types before building (a preflight check)
+    columns:
+      - name: merchant_day_key
+        data_type: varchar
+        data_tests: [unique, not_null]
+      - name: merchant_id
+        data_type: varchar
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_merchants')
+                field: merchant_id
+      - name: payment_date
+        data_type: date
+        data_tests: [not_null]
+      - name: attempts
+        data_type: bigint
+      - name: succeeded_count
+        data_type: bigint
+      - name: succeeded_amount_xaf
+        data_type: bigint
+      - name: refunded_amount_xaf
+        data_type: bigint
+  - name: dim_merchants
+    columns:
+      - name: merchant_id
+        data_tests: [unique, not_null]
+
+unit_tests:
+  - name: daily_totals_count_only_succeeded_and_refunded
+    description: Failed attempts count as attempts but add no money; refunds are tracked separately.
+    model: fct_daily_payments
+    given:
+      - input: ref('stg_payments')
+        rows:
+          - {payment_id: a, merchant_id: m1, amount_xaf: 1000, status: succeeded, payment_date: 2026-09-01}
+          - {payment_id: b, merchant_id: m1, amount_xaf: 500, status: failed, payment_date: 2026-09-01}
+          - {payment_id: c, merchant_id: m1, amount_xaf: 200, status: refunded, payment_date: 2026-09-01}
+    expect:
+      rows:
+        - {merchant_id: m1, attempts: 3, succeeded_count: 1, succeeded_amount_xaf: 1000, refunded_amount_xaf: 200}

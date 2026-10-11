@@ -1,0 +1,41 @@
+# engineering-os: base pre-commit hooks (stack-agnostic). Stack fragments are appended by `eos init`.
+# Fast hooks run on commit, on the changed files only; slow ones (types, tests) run on pre-push when that
+# stack's files changed. CI re-runs everything.
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+# Generated/vendored files are never reformatted (formatters would break eos drift checks and BMAD updates).
+exclude: '^(\.eos/|_bmad/|_bmad-output/|\.cursor/rules/eos-|\.clinerules/eos-|\.clinerules/hooks/|\.claude/rules/eos-|(\.agents|\.cline|\.claude)/skills/(eos|bmad)-)'
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: check-merge-conflict
+      - id: check-yaml
+        args: ["--allow-multiple-documents"]
+      - id: check-json
+        exclude: '(^|/)(tsconfig[^/]*\.json|\.vscode/.*|\.devcontainer/.*)$'
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: detect-private-key
+      - id: no-commit-to-branch
+        args: ["--branch", "main", "--branch", "master"]
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: eos-check
+        name: eos (AI context budget + adapter drift)
+        entry: python .eos/bin/eos.py check
+        language: python
+        pass_filenames: false
+        # only when agent context can change; CI runs it on every PR anyway
+        files: '^(AGENTS\.md|CLAUDE\.md|memory/|\.eos/|\.cursor/|\.clinerules|\.claude/|\.agents/|\.cline/|\.codex/)'
+      - id: eos-commit-msg
+        name: commit message (conventional, only when release-please uses it)
+        entry: python .eos/bin/eos.py commit-msg
+        language: python
+        stages: [commit-msg]

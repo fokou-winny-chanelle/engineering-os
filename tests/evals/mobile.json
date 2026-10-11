@@ -1,0 +1,766 @@
+{
+ "about": "Eval tasks for the mobile library (stage 9). Same method as the other eval files: context coverage (pack vs pack+refs) is an availability proxy, not proof of better answers; rubric and refs share an author. Score real agent answers with --responses DIR.",
+ "tasks": [
+  {
+   "id": "approach",
+   "pack": "mobile",
+   "refs": [
+    "mobile/choosing-approach"
+   ],
+   "prompt": "Small team, invoice app for Cameroon traders, web devs know React. React Native, Flutter or native?",
+   "rubric": [
+    {
+     "id": "rn",
+     "text": "React Native/Expo fits a React team",
+     "any": [
+      "Expo|React Native"
+     ]
+    },
+    {
+     "id": "flutter",
+     "text": "Flutter as the alternative",
+     "any": [
+      "Flutter"
+     ]
+    },
+    {
+     "id": "native",
+     "text": "when native Swift/Kotlin is warranted",
+     "any": [
+      "Swift|Kotlin"
+     ]
+    },
+    {
+     "id": "lowend",
+     "text": "weigh low-end Android devices",
+     "any": [
+      "low-end"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "expo-sdk",
+   "pack": "mobile",
+   "refs": [
+    "mobile/expo-react-native"
+   ],
+   "prompt": "Starting a new Expo app today: which SDK and what about the old architecture?",
+   "rubric": [
+    {
+     "id": "sdk",
+     "text": "current SDK 57 / RN 0.86",
+     "any": [
+      "SDK 57|0\\.86"
+     ]
+    },
+    {
+     "id": "newarch",
+     "text": "New Architecture mandatory",
+     "any": [
+      "New Architecture"
+     ]
+    },
+    {
+     "id": "router",
+     "text": "Expo Router",
+     "any": [
+      "Expo Router"
+     ]
+    },
+    {
+     "id": "eas",
+     "text": "EAS Build/Update",
+     "any": [
+      "EAS"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ota",
+   "pack": "mobile",
+   "refs": [
+    "mobile/expo-react-native"
+   ],
+   "prompt": "Can we push a payment-flow fix with EAS Update instead of a store release?",
+   "rubric": [
+    {
+     "id": "runtime",
+     "text": "runtimeVersion matches native code",
+     "any": [
+      "runtimeVersion|runtime version"
+     ]
+    },
+    {
+     "id": "js",
+     "text": "only JS/assets can change OTA",
+     "any": [
+      "JavaScript|JS"
+     ]
+    },
+    {
+     "id": "rules",
+     "text": "store rules on behaviour change",
+     "any": [
+      "guideline|policy|purpose"
+     ]
+    },
+    {
+     "id": "rollout",
+     "text": "staged rollout / rollback",
+     "any": [
+      "rollout|roll back|rollback"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "flutter-state",
+   "pack": "mobile",
+   "refs": [
+    "mobile/flutter"
+   ],
+   "prompt": "Flutter app: which state management and is Impeller on for old Androids?",
+   "rubric": [
+    {
+     "id": "ver",
+     "text": "current Flutter 3.47 / Dart 3.13",
+     "any": [
+      "3\\.47"
+     ]
+    },
+    {
+     "id": "state",
+     "text": "Riverpod/Bloc/Provider",
+     "any": [
+      "Riverpod|Bloc"
+     ]
+    },
+    {
+     "id": "impeller",
+     "text": "Impeller with OpenGL fallback below Android 10",
+     "any": [
+      "Impeller"
+     ]
+    },
+    {
+     "id": "fallback",
+     "text": "OpenGL / older devices",
+     "any": [
+      "OpenGL"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "nav",
+   "pack": "mobile",
+   "refs": [
+    "mobile/architecture-state-navigation"
+   ],
+   "prompt": "How should we structure screens, navigation and server data in the app?",
+   "rubric": [
+    {
+     "id": "server",
+     "text": "server state cache separate from UI state",
+     "any": [
+      "TanStack|server state"
+     ]
+    },
+    {
+     "id": "layers",
+     "text": "repository / data layer",
+     "any": [
+      "repositor"
+     ]
+    },
+    {
+     "id": "deeplink",
+     "text": "navigation handles deep links",
+     "any": [
+      "deep link"
+     ]
+    },
+    {
+     "id": "back",
+     "text": "Android back behaviour",
+     "any": [
+      "back"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "offline-db",
+   "pack": "mobile",
+   "refs": [
+    "mobile/offline-sync"
+   ],
+   "prompt": "Pick a local database for offline-first; WatermelonDB, Isar or op-sqlite?",
+   "rubric": [
+    {
+     "id": "sqlite",
+     "text": "SQLite-based option",
+     "any": [
+      "SQLite"
+     ]
+    },
+    {
+     "id": "drift",
+     "text": "Drift for Flutter",
+     "any": [
+      "Drift"
+     ]
+    },
+    {
+     "id": "isar",
+     "text": "Isar maintenance status",
+     "any": [
+      "Isar"
+     ]
+    },
+    {
+     "id": "watermelon",
+     "text": "WatermelonDB status",
+     "any": [
+      "WatermelonDB"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "outbox",
+   "pack": "mobile",
+   "refs": [
+    "mobile/offline-sync"
+   ],
+   "prompt": "Users create invoices offline and sync later. Design the sync.",
+   "rubric": [
+    {
+     "id": "outbox",
+     "text": "outbox of pending writes",
+     "any": [
+      "outbox"
+     ]
+    },
+    {
+     "id": "idem",
+     "text": "idempotency keys",
+     "any": [
+      "idempoten"
+     ]
+    },
+    {
+     "id": "conflict",
+     "text": "conflict resolution rule",
+     "any": [
+      "conflict"
+     ]
+    },
+    {
+     "id": "ui",
+     "text": "show pending state to the user",
+     "any": [
+      "pending"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "network",
+   "pack": "mobile",
+   "refs": [
+    "mobile/networking-unreliable"
+   ],
+   "prompt": "Requests time out on 2G/3G in rural Cameroon. What do we change?",
+   "rubric": [
+    {
+     "id": "timeout",
+     "text": "explicit timeouts",
+     "any": [
+      "timeout"
+     ]
+    },
+    {
+     "id": "retry",
+     "text": "retries with backoff and jitter",
+     "any": [
+      "backoff|jitter"
+     ]
+    },
+    {
+     "id": "compress",
+     "text": "compression / smaller payloads",
+     "any": [
+      "compress|gzip"
+     ]
+    },
+    {
+     "id": "datasaver",
+     "text": "data saver / metered awareness",
+     "any": [
+      "data saver|Data Saver|metered"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "perf",
+   "pack": "mobile",
+   "refs": [
+    "mobile/performance-low-end"
+   ],
+   "prompt": "The app feels slow on a Tecno phone with 2 GB RAM. Where do we look?",
+   "rubric": [
+    {
+     "id": "startup",
+     "text": "startup time / cold start",
+     "any": [
+      "startup|cold start"
+     ]
+    },
+    {
+     "id": "list",
+     "text": "list virtualisation",
+     "any": [
+      "FlashList|virtuali|ListView\\.builder"
+     ]
+    },
+    {
+     "id": "thread",
+     "text": "JS/UI thread work",
+     "any": [
+      "thread"
+     ]
+    },
+    {
+     "id": "size",
+     "text": "app size budget",
+     "any": [
+      "size"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "storage",
+   "pack": "mobile",
+   "refs": [
+    "mobile/security-masvs"
+   ],
+   "prompt": "Where do we keep the refresh token on the phone?",
+   "rubric": [
+    {
+     "id": "keychain",
+     "text": "Keychain / Keystore",
+     "any": [
+      "Keychain|Keystore"
+     ]
+    },
+    {
+     "id": "secure",
+     "text": "SecureStore / secure storage package",
+     "any": [
+      "SecureStore|secure_storage|secure storage"
+     ]
+    },
+    {
+     "id": "notasync",
+     "text": "not AsyncStorage / SharedPreferences",
+     "any": [
+      "AsyncStorage|SharedPreferences"
+     ]
+    },
+    {
+     "id": "masvs",
+     "text": "names the MASVS storage control",
+     "any": [
+      "MASVS"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "pinning",
+   "pack": "mobile",
+   "refs": [
+    "mobile/security-masvs"
+   ],
+   "prompt": "Should we add certificate pinning to the banking-style app?",
+   "rubric": [
+    {
+     "id": "tradeoff",
+     "text": "pinning trade-offs / OWASP says rarely",
+     "any": [
+      "pinning|pin"
+     ]
+    },
+    {
+     "id": "rotation",
+     "text": "certificate rotation breaks clients",
+     "any": [
+      "rotat"
+     ]
+    },
+    {
+     "id": "backup",
+     "text": "backup pins / expiry",
+     "any": [
+      "backup"
+     ]
+    },
+    {
+     "id": "killswitch",
+     "text": "if pinning, a remote kill switch and own endpoints only",
+     "any": [
+      "kill switch"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "secrets",
+   "pack": "mobile",
+   "refs": [
+    "mobile/security-masvs"
+   ],
+   "prompt": "Can we put the payment provider API key in EXPO_PUBLIC_ env?",
+   "rubric": [
+    {
+     "id": "bundle",
+     "text": "anything in the bundle is public",
+     "any": [
+      "bundle"
+     ]
+    },
+    {
+     "id": "server",
+     "text": "keep secret on server / proxy",
+     "any": [
+      "server|backend"
+     ]
+    },
+    {
+     "id": "check",
+     "text": "eos mobile check MOB007",
+     "any": [
+      "MOB007|eos mobile check"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "deeplink",
+   "pack": "mobile",
+   "refs": [
+    "mobile/security-masvs"
+   ],
+   "prompt": "We added a custom URL scheme for password reset links. Risks?",
+   "rubric": [
+    {
+     "id": "hijack",
+     "text": "scheme hijacking by other apps",
+     "any": [
+      "hijack"
+     ]
+    },
+    {
+     "id": "verified",
+     "text": "App Links / Universal Links verified",
+     "any": [
+      "App Links|Universal Links|autoVerify"
+     ]
+    },
+    {
+     "id": "validate",
+     "text": "validate deep link input",
+     "any": [
+      "validat|allowlist"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "auth",
+   "pack": "mobile",
+   "refs": [
+    "mobile/auth-payments"
+   ],
+   "prompt": "Implement login with our OIDC provider on mobile.",
+   "rubric": [
+    {
+     "id": "pkce",
+     "text": "authorization code + PKCE",
+     "any": [
+      "PKCE"
+     ]
+    },
+    {
+     "id": "browser",
+     "text": "system browser, not WebView",
+     "any": [
+      "system browser|ASWebAuthenticationSession|Custom Tabs"
+     ]
+    },
+    {
+     "id": "bio",
+     "text": "biometrics gate local key",
+     "any": [
+      "biometric"
+     ]
+    },
+    {
+     "id": "passkey",
+     "text": "passkeys",
+     "any": [
+      "passkey"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "momo",
+   "pack": "mobile",
+   "refs": [
+    "mobile/auth-payments"
+   ],
+   "prompt": "Add MTN MoMo / Orange Money payment to the app. Anything about app stores?",
+   "rubric": [
+    {
+     "id": "server",
+     "text": "payment confirmed server-side / webhook",
+     "any": [
+      "server|webhook"
+     ]
+    },
+    {
+     "id": "ussd",
+     "text": "USSD fallback",
+     "any": [
+      "USSD"
+     ]
+    },
+    {
+     "id": "iap",
+     "text": "store in-app purchase rules for digital goods",
+     "any": [
+      "in-app purchase|digital goods|Play Billing"
+     ]
+    },
+    {
+     "id": "review",
+     "text": "human review of money code",
+     "any": [
+      "review"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "push",
+   "pack": "mobile",
+   "refs": [
+    "mobile/push-notifications"
+   ],
+   "prompt": "Design push notifications for order updates.",
+   "rubric": [
+    {
+     "id": "fcm",
+     "text": "FCM / APNs",
+     "any": [
+      "FCM|APNs"
+     ]
+    },
+    {
+     "id": "limits",
+     "text": "delivery not guaranteed / collapse limits",
+     "any": [
+      "collaps|not guaranteed|best effort|100"
+     ]
+    },
+    {
+     "id": "perm",
+     "text": "notification permission (Android 13+)",
+     "any": [
+      "POST_NOTIFICATIONS|permission"
+     ]
+    },
+    {
+     "id": "data",
+     "text": "no sensitive data in payload",
+     "any": [
+      "sensitive|payload"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "release",
+   "pack": "mobile",
+   "refs": [
+    "mobile/release-ci"
+   ],
+   "prompt": "Set up release engineering for first Play Store and App Store launch.",
+   "rubric": [
+    {
+     "id": "signing",
+     "text": "Play App Signing / upload key",
+     "any": [
+      "signing|upload key"
+     ]
+    },
+    {
+     "id": "tracks",
+     "text": "Play tracks / closed testing 12 testers",
+     "any": [
+      "track|12 testers|closed test"
+     ]
+    },
+    {
+     "id": "testflight",
+     "text": "TestFlight",
+     "any": [
+      "TestFlight"
+     ]
+    },
+    {
+     "id": "staged",
+     "text": "staged / phased rollout",
+     "any": [
+      "staged|phased"
+     ]
+    },
+    {
+     "id": "target",
+     "text": "target API level deadline",
+     "any": [
+      "target API|API 36|targetSdk"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "observability",
+   "pack": "mobile",
+   "refs": [
+    "mobile/observability-a11y-i18n"
+   ],
+   "prompt": "Add crash reporting and analytics; anything on privacy and accessibility?",
+   "rubric": [
+    {
+     "id": "crash",
+     "text": "crash reporting / vitals",
+     "any": [
+      "Crashlytics|Sentry|vitals"
+     ]
+    },
+    {
+     "id": "privacy",
+     "text": "privacy / consent / no PII",
+     "any": [
+      "privacy|consent|PII"
+     ]
+    },
+    {
+     "id": "a11y",
+     "text": "TalkBack / VoiceOver",
+     "any": [
+      "TalkBack|VoiceOver"
+     ]
+    },
+    {
+     "id": "font",
+     "text": "font scaling",
+     "any": [
+      "font scal|Dynamic Type|font size"
+     ]
+    },
+    {
+     "id": "i18n",
+     "text": "FR/EN",
+     "any": [
+      "French|FR"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "testing",
+   "pack": "mobile",
+   "refs": [
+    "testing/mobile-qa"
+   ],
+   "prompt": "How do we test the mobile app end to end and on low-end phones?",
+   "rubric": [
+    {
+     "id": "maestro",
+     "text": "Maestro flows",
+     "any": [
+      "Maestro"
+     ]
+    },
+    {
+     "id": "detox",
+     "text": "Detox / integration_test / Patrol",
+     "any": [
+      "Detox|integration_test|Patrol"
+     ]
+    },
+    {
+     "id": "farm",
+     "text": "device farm / real devices",
+     "any": [
+      "device farm|Firebase Test Lab|real device"
+     ]
+    },
+    {
+     "id": "lowend",
+     "text": "low-end device testing",
+     "any": [
+      "low-end"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "market",
+   "pack": "mobile",
+   "refs": [
+    "mobile/choosing-approach",
+    "mobile/performance-low-end"
+   ],
+   "prompt": "What does the Cameroon device market mean for our app?",
+   "rubric": [
+    {
+     "id": "android",
+     "text": "Android dominant share (sourced)",
+     "any": [
+      "Android"
+     ]
+    },
+    {
+     "id": "transsion",
+     "text": "Tecno/Infinix/itel (Transsion)",
+     "any": [
+      "Tecno|Transsion|Infinix"
+     ]
+    },
+    {
+     "id": "data",
+     "text": "data cost / app size",
+     "any": [
+      "data|size"
+     ]
+    },
+    {
+     "id": "old",
+     "text": "older Android versions",
+     "any": [
+      "Android 9|older"
+     ]
+    }
+   ]
+  }
+ ]
+}

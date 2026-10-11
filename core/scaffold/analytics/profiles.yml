@@ -1,0 +1,13 @@
+# Local and CI targets use DuckDB files inside analytics/ (no server, no secrets). For a warehouse target, read
+# credentials from the environment (`{{ env_var('DBT_PASSWORD') }}`) and never commit them.
+analytics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: analytics.duckdb
+      threads: 4
+    ci:
+      type: duckdb
+      path: target/ci.duckdb
+      threads: 4

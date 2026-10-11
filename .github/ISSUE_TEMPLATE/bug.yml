@@ -1,0 +1,29 @@
+name: Bug report
+description: Something in eos does not work as documented
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: eos version and OS
+      description: Output of `eos --version`, plus OS and shell (e.g. Windows 11, PowerShell 5.1)
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Commands you ran. Paste `eos doctor` output if relevant. Never paste secrets or tokens.
+      render: shell
+  - type: dropdown
+    id: tool
+    attributes:
+      label: AI tool involved
+      multiple: true
+      options: [Cursor, Cline, Claude Code, Codex, none / CLI only]

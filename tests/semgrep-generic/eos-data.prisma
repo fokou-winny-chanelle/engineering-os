@@ -1,0 +1,13 @@
+model Order {
+  id         BigInt  @id @default(autoincrement())
+  // ruleid: eos-money-float-prisma
+  amount     Float
+  // ruleid: eos-money-float-prisma
+  totalPrice Float?  @map("total_price")
+  // ok: eos-money-float-prisma
+  price      Decimal @db.Decimal(12, 2)
+  // ok: eos-money-float-prisma
+  taxRate    Float
+  // ok: eos-money-float-prisma
+  latitude   Float
+}

@@ -1,0 +1,15 @@
+  # Prefer an upstream pre-commit repo for the stack's formatter/linter; fall back to a local hook.
+  - repo: local
+    hooks:
+      - id: STACK_ID-lint
+        name: STACK_ID lint
+        entry: FORMAT_AND_LINT_COMMAND
+        language: system
+        files: '\.EXT$'
+        pass_filenames: false
+      - id: STACK_ID-tests
+        name: STACK_ID tests (pre-push)
+        entry: TEST_COMMAND
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

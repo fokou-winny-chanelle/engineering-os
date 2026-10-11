@@ -1,0 +1,21 @@
+  - repo: local
+    hooks:
+      - id: ts-lint
+        name: ts lint (`lint:files` on changed files if defined, else `lint`)
+        entry: python .eos/bin/eos.py hook-run --cd {{NODE_DIR}} --id ts-lint@{{NODE_DIR}} --script lint --pm {{PM}} --
+        language: python
+        files: '\.(ts|tsx|mts|cts|js|jsx|mjs)$'
+      - id: ts-typecheck
+        name: ts type-check (pre-push)
+        entry: python .eos/bin/eos.py hook-run --id ts-typecheck@{{NODE_DIR}} -- {{PM_DIR}} run typecheck
+        language: python
+        files: '\.(ts|tsx|mts|cts)$'
+        pass_filenames: false
+        stages: [pre-push]
+      - id: ts-tests
+        name: ts tests (pre-push)
+        entry: python .eos/bin/eos.py hook-run --id ts-tests@{{NODE_DIR}} -- {{PM_DIR}} test
+        language: python
+        files: '\.(ts|tsx|mts|cts|js|jsx|mjs)$'
+        pass_filenames: false
+        stages: [pre-push]

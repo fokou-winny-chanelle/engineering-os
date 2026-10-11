@@ -1,0 +1,60 @@
+# expect: (none) - edge cases that must NOT fire: per-operation security without a global one, public
+# endpoint with `security: []`, rate/percent/score numbers next to money words, a root path, a custom
+# method, a non-list GET without pagination, a read-only POST exempted via its Idempotency-Key header.
+openapi: 3.1.0
+info: { title: Edge API, version: 1.0.0, description: Edge cases., contact: { name: x, url: "https://example.com" } }
+servers: [{ url: "https://api.example.com/v1" }]
+tags: [{ name: t, description: t }]
+paths:
+  /:
+    get:
+      operationId: root
+      summary: s
+      description: d
+      tags: [t]
+      security: []
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: object, properties: { version: { type: string } } } } } }
+        "429": { $ref: "#/components/responses/Problem" }
+  /fx-quotes:
+    post:
+      operationId: quote
+      summary: s
+      description: d
+      tags: [t]
+      security: [{ bearer: [] }]
+      parameters: [{ name: Idempotency-Key, in: header, schema: { type: string } }]
+      requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/Quote" } } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Quote" } } } }
+        "422": { $ref: "#/components/responses/Problem" }
+  /accounts/{account_id}:close:
+    post:
+      operationId: closeAccount
+      summary: s
+      description: d
+      tags: [t]
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: account_id, in: path, required: true, schema: { type: string } }
+        - { name: idempotency-key, in: header, schema: { type: string } }
+      responses:
+        "204": { description: closed }
+        "409": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer }
+  responses:
+    Problem:
+      description: problem
+      content: { application/problem+json: { schema: { type: object, properties: { type: { type: string }, status: { type: integer } } } } }
+  schemas:
+    Quote:
+      type: object
+      properties:
+        exchangeRate: { type: number }
+        discount_percent: { type: number }
+        fee_rate: { type: number }
+        priceScore: { type: number }
+        amount_minor: { type: integer }
+        expires_at: { type: string, format: date-time }

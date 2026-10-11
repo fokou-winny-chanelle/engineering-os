@@ -1,0 +1,750 @@
+{
+ "about": "Eval tasks for the operations / SRE library (stage 6). Same method as the other eval files: context coverage (pack vs pack+refs) is an availability proxy, not proof of better answers; rubric and refs share an author. Score real agent answers with --responses DIR.",
+ "tasks": [
+  {
+   "id": "slo-target",
+   "pack": "operations",
+   "refs": [
+    "ops/slo-error-budgets"
+   ],
+   "prompt": "Our API is new. What availability SLO should we set, and should we aim for 100%?",
+   "rubric": [
+    {
+     "id": "no100",
+     "text": "100% is the wrong target",
+     "any": [
+      "100\\s?%"
+     ]
+    },
+    {
+     "id": "ratio",
+     "text": "SLI as good events / total events",
+     "any": [
+      "good.{0,20}total|ratio"
+     ]
+    },
+    {
+     "id": "current",
+     "text": "don't pick the target from current performance",
+     "any": [
+      "current performance"
+     ]
+    },
+    {
+     "id": "budget",
+     "text": "error budget = 1 - SLO",
+     "any": [
+      "error budget"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "burn-rate",
+   "pack": "operations",
+   "refs": [
+    "ops/slo-error-budgets"
+   ],
+   "prompt": "How should we alert on our 99.5% SLO without paging on every blip?",
+   "rubric": [
+    {
+     "id": "14",
+     "text": "fast-burn page at 14.4x",
+     "any": [
+      "14\\.4"
+     ]
+    },
+    {
+     "id": "multi",
+     "text": "multiwindow: long + short window",
+     "any": [
+      "multi.?window|short window|5\\s?m"
+     ]
+    },
+    {
+     "id": "ticket",
+     "text": "slow burn becomes a ticket",
+     "any": [
+      "ticket"
+     ]
+    },
+    {
+     "id": "lowtraffic",
+     "text": "low traffic: synthetic traffic or combine services",
+     "any": [
+      "synthetic|low traffic|low-traffic"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "budget-policy",
+   "pack": "operations",
+   "refs": [
+    "ops/slo-error-budgets"
+   ],
+   "prompt": "We blew our error budget this month. What should happen now?",
+   "rubric": [
+    {
+     "id": "freeze",
+     "text": "halt feature releases except P0/security fixes",
+     "any": [
+      "halt|freeze|stop.{0,20}release"
+     ]
+    },
+    {
+     "id": "20",
+     "text": "postmortem if one incident used >20% of budget",
+     "any": [
+      "20\\s?%"
+     ]
+    },
+    {
+     "id": "policy",
+     "text": "agree the policy in advance",
+     "any": [
+      "policy"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "otel-wire",
+   "pack": "operations",
+   "refs": [
+    "ops/opentelemetry"
+   ],
+   "prompt": "Add tracing and metrics to our FastAPI service in a vendor-neutral way.",
+   "rubric": [
+    {
+     "id": "otlp",
+     "text": "export OTLP",
+     "any": [
+      "OTLP"
+     ]
+    },
+    {
+     "id": "collector",
+     "text": "use a Collector",
+     "any": [
+      "[Cc]ollector"
+     ]
+    },
+    {
+     "id": "servicename",
+     "text": "set service.name via env",
+     "any": [
+      "service\\.name|OTEL_SERVICE_NAME"
+     ]
+    },
+    {
+     "id": "scaffold",
+     "text": "eos scaffold otel-python",
+     "any": [
+      "otel-python"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "sampling",
+   "pack": "operations",
+   "refs": [
+    "ops/opentelemetry"
+   ],
+   "prompt": "Our trace bill is growing. How should we sample?",
+   "rubric": [
+    {
+     "id": "head",
+     "text": "head sampling",
+     "any": [
+      "[Hh]ead"
+     ]
+    },
+    {
+     "id": "tail",
+     "text": "tail sampling keeps errors/slow traces",
+     "any": [
+      "[Tt]ail"
+     ]
+    },
+    {
+     "id": "parent",
+     "text": "parent-based sampler",
+     "any": [
+      "parentbased|parent-based|ParentBased"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cardinality-logs",
+   "pack": "operations",
+   "refs": [
+    "ops/opentelemetry",
+    "ops/dashboards-alerting"
+   ],
+   "prompt": "Can we add user_id and email as metric labels, and log the request body for debugging?",
+   "rubric": [
+    {
+     "id": "card",
+     "text": "no high-cardinality labels",
+     "any": [
+      "cardinality"
+     ]
+    },
+    {
+     "id": "pii",
+     "text": "no PII in telemetry/logs",
+     "any": [
+      "PII|personal data"
+     ]
+    },
+    {
+     "id": "trace",
+     "text": "correlate logs with trace_id",
+     "any": [
+      "trace_id|trace ID"
+     ]
+    },
+    {
+     "id": "semgrep",
+     "text": "log rule enforced by semgrep",
+     "any": [
+      "semgrep|eos-log"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dashboards",
+   "pack": "operations",
+   "refs": [
+    "ops/dashboards-alerting"
+   ],
+   "prompt": "What should our first service dashboard show?",
+   "rubric": [
+    {
+     "id": "red",
+     "text": "RED: rate, errors, duration",
+     "any": [
+      "RED"
+     ]
+    },
+    {
+     "id": "use",
+     "text": "USE for resources",
+     "any": [
+      "USE"
+     ]
+    },
+    {
+     "id": "golden",
+     "text": "four golden signals",
+     "any": [
+      "golden signals"
+     ]
+    },
+    {
+     "id": "symptom",
+     "text": "alert on symptoms, not causes",
+     "any": [
+      "symptom"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "oncall-solo",
+   "pack": "operations",
+   "refs": [
+    "ops/dashboards-alerting",
+    "ops/incident-runbooks"
+   ],
+   "prompt": "I'm a solo developer. How do I set up on-call without burning out?",
+   "rubric": [
+    {
+     "id": "actionable",
+     "text": "every page actionable",
+     "any": [
+      "actionable"
+     ]
+    },
+    {
+     "id": "runbook",
+     "text": "every alert links a runbook",
+     "any": [
+      "runbook"
+     ]
+    },
+    {
+     "id": "ticket",
+     "text": "non-urgent goes to tickets",
+     "any": [
+      "ticket"
+     ]
+    },
+    {
+     "id": "review",
+     "text": "review noisy alerts regularly",
+     "any": [
+      "noisy|fatigue|review"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "incident",
+   "pack": "operations",
+   "refs": [
+    "ops/incident-runbooks"
+   ],
+   "prompt": "Checkout is failing for many users right now. How do we run the incident?",
+   "rubric": [
+    {
+     "id": "sev",
+     "text": "declare a severity level",
+     "any": [
+      "SEV|severity"
+     ]
+    },
+    {
+     "id": "ic",
+     "text": "incident commander role",
+     "any": [
+      "[Ii]ncident [Cc]ommander|\\bIC\\b"
+     ]
+    },
+    {
+     "id": "comms",
+     "text": "regular status updates",
+     "any": [
+      "update|status page"
+     ]
+    },
+    {
+     "id": "mitigate",
+     "text": "mitigate first (rollback/flag) then diagnose",
+     "any": [
+      "mitigat|roll ?back"
+     ]
+    },
+    {
+     "id": "blameless",
+     "text": "blameless postmortem",
+     "any": [
+      "blameless"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "canary",
+   "pack": "release",
+   "refs": [
+    "ops/deploy-strategies"
+   ],
+   "prompt": "How should we roll out a risky backend change and be able to roll back?",
+   "rubric": [
+    {
+     "id": "canary",
+     "text": "canary to a small subset",
+     "any": [
+      "canary"
+     ]
+    },
+    {
+     "id": "bluegreen",
+     "text": "blue-green switch back",
+     "any": [
+      "blue.green"
+     ]
+    },
+    {
+     "id": "compare",
+     "text": "compare canary vs control metrics",
+     "any": [
+      "control|baseline"
+     ]
+    },
+    {
+     "id": "migrations",
+     "text": "expand/contract migrations compatible with both versions",
+     "any": [
+      "expand|both versions|backward"
+     ]
+    },
+    {
+     "id": "approval",
+     "text": "protected environment / required reviewers",
+     "any": [
+      "required reviewers|protected environment|approval"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "flags",
+   "pack": "release",
+   "refs": [
+    "ops/feature-flags"
+   ],
+   "prompt": "We want feature flags. Should we use OpenFeature and how do we stop flag debt?",
+   "rubric": [
+    {
+     "id": "of",
+     "text": "OpenFeature vendor-neutral API",
+     "any": [
+      "OpenFeature"
+     ]
+    },
+    {
+     "id": "cat",
+     "text": "flag categories (release/ops/experiment/permission)",
+     "any": [
+      "release.{0,40}(ops|operational)|categor"
+     ]
+    },
+    {
+     "id": "expiry",
+     "text": "expiry dates / cleanup",
+     "any": [
+      "expir|clean ?up|time bomb"
+     ]
+    },
+    {
+     "id": "kill",
+     "text": "kill switch",
+     "any": [
+      "kill.?switch"
+     ]
+    },
+    {
+     "id": "scaffold",
+     "text": "eos scaffold flags",
+     "any": [
+      "scaffold flags"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dr",
+   "pack": "infra-devops",
+   "refs": [
+    "ops/dr-chaos"
+   ],
+   "prompt": "How do we make sure we can recover our Postgres database and uploads after a disaster?",
+   "rubric": [
+    {
+     "id": "rpo",
+     "text": "RPO/RTO defined",
+     "any": [
+      "RPO"
+     ]
+    },
+    {
+     "id": "321",
+     "text": "3-2-1 backups",
+     "any": [
+      "3-2-1"
+     ]
+    },
+    {
+     "id": "drill",
+     "text": "timed restore drills",
+     "any": [
+      "restore drill|drill"
+     ]
+    },
+    {
+     "id": "account",
+     "text": "copy in another account/region",
+     "any": [
+      "another account|another region|offsite"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "chaos",
+   "pack": "operations",
+   "refs": [
+    "ops/dr-chaos"
+   ],
+   "prompt": "Should our two-person team start doing chaos engineering?",
+   "rubric": [
+    {
+     "id": "basics",
+     "text": "only after SLOs/monitoring basics",
+     "any": [
+      "after the basics|monitoring|SLO"
+     ]
+    },
+    {
+     "id": "hyp",
+     "text": "steady state + hypothesis",
+     "any": [
+      "steady state|hypothes"
+     ]
+    },
+    {
+     "id": "blast",
+     "text": "minimise blast radius",
+     "any": [
+      "blast radius"
+     ]
+    },
+    {
+     "id": "gameday",
+     "text": "game day in staging",
+     "any": [
+      "game day"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "k8s",
+   "pack": "infra-devops",
+   "refs": [
+    "ops/platforms"
+   ],
+   "prompt": "Should we move our single Next.js app and API to Kubernetes?",
+   "rubric": [
+    {
+     "id": "paas",
+     "text": "PaaS fits small teams",
+     "any": [
+      "PaaS"
+     ]
+    },
+    {
+     "id": "notpaas",
+     "text": "Kubernetes is not a PaaS",
+     "any": [
+      "not a traditional|not a PaaS|toolkit"
+     ]
+    },
+    {
+     "id": "probes",
+     "text": "liveness vs readiness",
+     "any": [
+      "readiness"
+     ]
+    },
+    {
+     "id": "adr",
+     "text": "record decision in an ADR",
+     "any": [
+      "ADR"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "iac",
+   "pack": "infra-devops",
+   "refs": [
+    "ops/iac"
+   ],
+   "prompt": "Set up Terraform for our AWS account. Anything to watch out for?",
+   "rubric": [
+    {
+     "id": "tofu",
+     "text": "OpenTofu option / BUSL licence",
+     "any": [
+      "OpenTofu|BUSL"
+     ]
+    },
+    {
+     "id": "state",
+     "text": "remote state, never in git",
+     "any": [
+      "state"
+     ]
+    },
+    {
+     "id": "lock",
+     "text": "commit .terraform.lock.hcl",
+     "any": [
+      "lock\\.hcl"
+     ]
+    },
+    {
+     "id": "plan",
+     "text": "plan in CI, human applies",
+     "any": [
+      "plan"
+     ]
+    },
+    {
+     "id": "scan",
+     "text": "checkov scan",
+     "any": [
+      "checkov"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "config",
+   "pack": "infra-devops",
+   "refs": [
+    "ops/runtime-config"
+   ],
+   "prompt": "How should we manage config and secrets for our containers across staging and production?",
+   "rubric": [
+    {
+     "id": "12f",
+     "text": "config separate from code (twelve-factor)",
+     "any": [
+      "twelve-factor|12.?factor"
+     ]
+    },
+    {
+     "id": "validate",
+     "text": "validate at startup / fail fast",
+     "any": [
+      "startup|fail fast"
+     ]
+    },
+    {
+     "id": "k8s",
+     "text": "Kubernetes Secrets unencrypted by default",
+     "any": [
+      "unencrypted|encryption at rest"
+     ]
+    },
+    {
+     "id": "rotate",
+     "text": "rotation with two valid credentials",
+     "any": [
+      "rotat"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "momo",
+   "pack": "operations",
+   "refs": [
+    "ops/africa-connectivity"
+   ],
+   "prompt": "We integrate MTN MoMo for payments in Cameroon. What operational risks should we plan for?",
+   "rubric": [
+    {
+     "id": "once",
+     "text": "callback sent once, no retry",
+     "any": [
+      "once|no retry"
+     ]
+    },
+    {
+     "id": "poll",
+     "text": "poll status / reconcile",
+     "any": [
+      "poll|reconcil"
+     ]
+    },
+    {
+     "id": "maint",
+     "text": "provider maintenance windows",
+     "any": [
+      "maintenance"
+     ]
+    },
+    {
+     "id": "kill",
+     "text": "kill switch flag",
+     "any": [
+      "kill.?switch"
+     ]
+    },
+    {
+     "id": "cable",
+     "text": "regional cable outages",
+     "any": [
+      "cable|outage"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "region",
+   "pack": "architecture",
+   "refs": [
+    "ops/africa-connectivity"
+   ],
+   "prompt": "Which cloud region should we host in for users in West and Central Africa?",
+   "rubric": [
+    {
+     "id": "sa",
+     "text": "SA regions: af-south-1 / africa-south1 / South Africa North",
+     "any": [
+      "af-south-1|africa-south1|South Africa North"
+     ]
+    },
+    {
+     "id": "measure",
+     "text": "measure latency from users' networks",
+     "any": [
+      "measure"
+     ]
+    },
+    {
+     "id": "residency",
+     "text": "data residency / cross-border law",
+     "any": [
+      "residen|cross-border"
+     ]
+    },
+    {
+     "id": "cdn",
+     "text": "CDN for static assets",
+     "any": [
+      "CDN"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cost",
+   "pack": "operations",
+   "refs": [
+    "ops/capacity-cost"
+   ],
+   "prompt": "How do we avoid a surprise cloud bill?",
+   "rubric": [
+    {
+     "id": "budget",
+     "text": "budget alerts (actual and forecast)",
+     "any": [
+      "forecast"
+     ]
+    },
+    {
+     "id": "cap",
+     "text": "alerts don't cap spend",
+     "any": [
+      "cap"
+     ]
+    },
+    {
+     "id": "tags",
+     "text": "tag resources",
+     "any": [
+      "tag"
+     ]
+    },
+    {
+     "id": "finops",
+     "text": "FinOps inform/optimize/operate",
+     "any": [
+      "FinOps|Inform"
+     ]
+    }
+   ]
+  }
+ ]
+}

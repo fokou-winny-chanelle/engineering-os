@@ -1,0 +1,143 @@
+{
+  "_doc": "Project-type profiles. 'skills' = intent/both phase packs installed (each costs a one-line skill description every request). Files-mode packs are always installed: they cost nothing until a matching file is edited. 'performance-scale' is added when scale is medium/large. See docs/PROFILES.md. 'by_mode' and 'by_topology' add packs for the lifecycle mode and repo shape.",
+  "base": [
+    "requirements",
+    "architecture",
+    "decisions",
+    "code-review",
+    "security",
+    "agent-security",
+    "release",
+    "maintenance"
+  ],
+  "profiles": {
+    "web-app": {
+      "title": "Web app (UI + backend)",
+      "skills": [
+        "discovery",
+        "ux-design",
+        "design-direction",
+        "api-design",
+        "data-modeling",
+        "operations"
+      ],
+      "mcp_profile": "minimal",
+      "scaffolds": [
+        "security",
+        "release",
+        "e2e-node",
+        "compose",
+        "reproducible"
+      ]
+    },
+    "api": {
+      "title": "API / backend service",
+      "skills": [
+        "api-design",
+        "data-modeling",
+        "operations",
+        "performance-scale"
+      ],
+      "mcp_profile": "api",
+      "scaffolds": [
+        "security",
+        "release",
+        "api-contract",
+        "compose",
+        "reproducible"
+      ]
+    },
+    "mobile": {
+      "title": "Mobile app (React Native/Expo, Flutter or native)",
+      "skills": [
+        "discovery",
+        "ux-design",
+        "design-direction",
+        "api-design",
+        "operations"
+      ],
+      "mcp_profile": "minimal",
+      "scaffolds": [
+        "security",
+        "release",
+        "reproducible"
+      ]
+    },
+    "data-ml": {
+      "title": "Data pipelines / machine learning",
+      "skills": [
+        "discovery",
+        "data-modeling",
+        "operations"
+      ],
+      "mcp_profile": "minimal",
+      "scaffolds": [
+        "security",
+        "reproducible"
+      ]
+    },
+    "internal-tool": {
+      "title": "Internal tool / admin app",
+      "skills": [
+        "ux-design",
+        "data-modeling",
+        "operations"
+      ],
+      "mcp_profile": "minimal",
+      "scaffolds": [
+        "security",
+        "compose",
+        "reproducible"
+      ]
+    },
+    "cli-library": {
+      "title": "CLI tool or library",
+      "skills": [
+        "api-design"
+      ],
+      "mcp_profile": "minimal",
+      "scaffolds": [
+        "security",
+        "release",
+        "reproducible"
+      ]
+    },
+    "full": {
+      "title": "Everything (all packs; v0.3 behaviour)",
+      "skills": [
+        "*"
+      ],
+      "mcp_profile": "minimal",
+      "scaffolds": [
+        "security",
+        "release",
+        "reproducible"
+      ]
+    }
+  },
+  "by_mode": {
+    "brownfield": [
+      "migration",
+      "maintenance"
+    ],
+    "rewrite": [
+      "migration",
+      "maintenance"
+    ],
+    "maintain": [
+      "maintenance",
+      "performance-scale",
+      "operations"
+    ]
+  },
+  "by_topology": {
+    "modular-monolith": [
+      "topology"
+    ],
+    "microservices": [
+      "topology",
+      "api-design"
+    ],
+    "monorepo": []
+  }
+}

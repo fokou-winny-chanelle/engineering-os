@@ -1,0 +1,8 @@
+# engineering-os -> BMAD dev agent (Amelia). Team override; committed. Personal tweaks: bmad-agent-dev.user.toml.
+# Arrays append to BMAD defaults. No `file:` packs here on purpose: stack and testing packs already attach by
+# file path in Cursor/Cline/Claude Code, so injecting them again would load ~4-5k tokens twice per session.
+[agent]
+persistent_facts = [
+  "Name tests after the AC ids they prove (test_ac2_...); the PR body follows .github/pull_request_template.md (AC -> test map, risk boxes).",
+  "A story is done when the stack full check in AGENTS.md is green; after 3 failed fix attempts on the same check, write memory/handoff.md and ask.",
+]

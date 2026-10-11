@@ -1,0 +1,524 @@
+{
+ "about": "Eval tasks for the analytics library (stage 11). Same method as the other eval files: context coverage (pack vs pack+refs) is an availability proxy, not proof of better answers; rubric and refs share an author. Score real agent answers with --responses DIR.",
+ "tasks": [
+  {
+   "id": "first-warehouse",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/architecture"
+   ],
+   "prompt": "We are a 6-person fintech on Postgres. Finance wants dashboards over two years of payments. Do we need Snowflake?",
+   "rubric": [
+    {
+     "id": "separate",
+     "text": "keep analytics off the OLTP primary (replica or separate store)",
+     "any": [
+      "replica|OLTP"
+     ]
+    },
+    {
+     "id": "duckdb",
+     "text": "DuckDB or Postgres-first is enough at small scale",
+     "any": [
+      "DuckDB"
+     ]
+    },
+    {
+     "id": "stages",
+     "text": "adopt in stages when a real limit appears",
+     "any": [
+      "[Ss]tage"
+     ]
+    },
+    {
+     "id": "cost",
+     "text": "cost guardrails before a cloud warehouse",
+     "any": [
+      "quota|budget|auto-suspend|suspend"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cdc-or-batch",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/architecture"
+   ],
+   "prompt": "Should we stream changes from Postgres with CDC or just copy tables nightly?",
+   "rubric": [
+    {
+     "id": "batch",
+     "text": "batch ELT first",
+     "any": [
+      "[Bb]atch"
+     ]
+    },
+    {
+     "id": "cdc",
+     "text": "CDC when freshness/deletes need it",
+     "any": [
+      "CDC"
+     ]
+    },
+    {
+     "id": "debezium",
+     "text": "Debezium/logical replication named",
+     "any": [
+      "Debezium|logical replication"
+     ]
+    },
+    {
+     "id": "deletes",
+     "text": "hard deletes are missed by incremental copies",
+     "any": [
+      "delete"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dbt-structure",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/dbt-elt"
+   ],
+   "prompt": "How should we lay out our dbt project and what should we test?",
+   "rubric": [
+    {
+     "id": "layers",
+     "text": "staging → intermediate → marts",
+     "any": [
+      "staging"
+     ]
+    },
+    {
+     "id": "generic",
+     "text": "unique/not_null/accepted_values/relationships",
+     "any": [
+      "accepted_values"
+     ]
+    },
+    {
+     "id": "unit",
+     "text": "unit tests for logic",
+     "any": [
+      "unit test"
+     ]
+    },
+    {
+     "id": "contract",
+     "text": "enforced model contract",
+     "any": [
+      "contract"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dbt-version",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/dbt-elt"
+   ],
+   "prompt": "Which dbt should we install for our Postgres warehouse, the new engine or dbt-core?",
+   "rubric": [
+    {
+     "id": "v2",
+     "text": "v2 (Rust engine) adapter list does not include Postgres",
+     "any": [
+      "Postgres"
+     ]
+    },
+    {
+     "id": "v1",
+     "text": "dbt-core v1 still maintained",
+     "any": [
+      "v1|dbt-core"
+     ]
+    },
+    {
+     "id": "pin",
+     "text": "pin versions",
+     "any": [
+      "pin|=="
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dbt-ci",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/dbt-elt"
+   ],
+   "prompt": "Our dbt CI rebuilds everything and takes 40 minutes. Fix it.",
+   "rubric": [
+    {
+     "id": "slim",
+     "text": "state:modified+ with defer",
+     "any": [
+      "state:modified"
+     ]
+    },
+    {
+     "id": "defer",
+     "text": "--defer --state",
+     "any": [
+      "defer"
+     ]
+    },
+    {
+     "id": "duckdb",
+     "text": "DuckDB/offline CI target",
+     "any": [
+      "DuckDB|ci target|--target ci"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "idempotent-pipeline",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/pipelines-orchestration"
+   ],
+   "prompt": "Our nightly job sometimes runs twice and doubles revenue. How do we design pipelines that are safe to rerun?",
+   "rubric": [
+    {
+     "id": "idem",
+     "text": "idempotent: rerun gives the same result",
+     "any": [
+      "idempotent"
+     ]
+    },
+    {
+     "id": "upsert",
+     "text": "overwrite partition / MERGE / upsert, not append",
+     "any": [
+      "MERGE|upsert|UPSERT|overwrite"
+     ]
+    },
+    {
+     "id": "interval",
+     "text": "use the run's data interval, not now()",
+     "any": [
+      "now\\(\\)|data_interval|logical date"
+     ]
+    },
+    {
+     "id": "backfill",
+     "text": "backfills are reruns of the same code",
+     "any": [
+      "backfill"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "orchestrator",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/pipelines-orchestration"
+   ],
+   "prompt": "Airflow, Dagster or Prefect for a small team with a dozen jobs?",
+   "rubric": [
+    {
+     "id": "cron",
+     "text": "cron/CI schedule may be enough",
+     "any": [
+      "cron"
+     ]
+    },
+    {
+     "id": "dagster",
+     "text": "Dagster asset-based",
+     "any": [
+      "Dagster"
+     ]
+    },
+    {
+     "id": "airflow",
+     "text": "Airflow mature, heavier",
+     "any": [
+      "Airflow"
+     ]
+    },
+    {
+     "id": "prefect",
+     "text": "Prefect Python-first",
+     "any": [
+      "Prefect"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "data-contract",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/quality-contracts"
+   ],
+   "prompt": "The mobile team keeps renaming columns that finance dashboards depend on. How do we stop the breakage?",
+   "rubric": [
+    {
+     "id": "contract",
+     "text": "data contract (ODCS)",
+     "any": [
+      "ODCS|[Cc]ontract"
+     ]
+    },
+    {
+     "id": "breaking",
+     "text": "breaking-change rules with a major version",
+     "any": [
+      "[Bb]reaking"
+     ]
+    },
+    {
+     "id": "check",
+     "text": "eos data check --base in CI",
+     "any": [
+      "eos data check"
+     ]
+    },
+    {
+     "id": "deprecate",
+     "text": "deprecation window / versions side by side",
+     "any": [
+      "deprecat"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "quality-tools",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/quality-contracts"
+   ],
+   "prompt": "dbt tests, Great Expectations or Soda for data quality?",
+   "rubric": [
+    {
+     "id": "dbt",
+     "text": "dbt tests inside the warehouse",
+     "any": [
+      "dbt test"
+     ]
+    },
+    {
+     "id": "gx",
+     "text": "Great Expectations",
+     "any": [
+      "Great Expectations"
+     ]
+    },
+    {
+     "id": "soda",
+     "text": "Soda licence (Elastic License 2.0)",
+     "any": [
+      "Elastic"
+     ]
+    },
+    {
+     "id": "quarantine",
+     "text": "quarantine bad rows instead of dropping",
+     "any": [
+      "quarantine|_rejected"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "event-taxonomy",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/product-events"
+   ],
+   "prompt": "Our analytics has 400 event names like 'clicked_btn_3'. How should we name and govern events?",
+   "rubric": [
+    {
+     "id": "plan",
+     "text": "tracking plan",
+     "any": [
+      "[Tt]racking plan"
+     ]
+    },
+    {
+     "id": "object-action",
+     "text": "Object + Action naming",
+     "any": [
+      "Object|object-action|Object Action"
+     ]
+    },
+    {
+     "id": "snake",
+     "text": "snake_case properties",
+     "any": [
+      "snake_case"
+     ]
+    },
+    {
+     "id": "nodynamic",
+     "text": "no dynamic event names",
+     "any": [
+      "dynamic"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "analytics-consent",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/product-events",
+    "analytics/privacy-anonymisation"
+   ],
+   "prompt": "Can we add PostHog to our web app for users in Cameroon and France without a consent banner?",
+   "rubric": [
+    {
+     "id": "cnil",
+     "text": "CNIL exemption conditions for audience measurement",
+     "any": [
+      "CNIL"
+     ]
+    },
+    {
+     "id": "cameroon",
+     "text": "Cameroon law requires consent (Section 9)",
+     "any": [
+      "Cameroon|2024/017"
+     ]
+    },
+    {
+     "id": "ip",
+     "text": "IP truncation / no IP capture",
+     "any": [
+      "IP"
+     ]
+    },
+    {
+     "id": "optout",
+     "text": "opt-out/consent before capture",
+     "any": [
+      "opt_out|opt-out|consent"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "pii-events",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/product-events"
+   ],
+   "prompt": "A developer wants to send the user's email and phone with every analytics event to make support easier. OK?",
+   "rubric": [
+    {
+     "id": "no",
+     "text": "no personal data in event properties",
+     "any": [
+      "[Nn]ot|never"
+     ]
+    },
+    {
+     "id": "id",
+     "text": "use a pseudonymous internal id",
+     "any": [
+      "pseudonym|internal id|user id|user_id"
+     ]
+    },
+    {
+     "id": "semgrep",
+     "text": "Semgrep eos-analytics-pii rules",
+     "any": [
+      "eos-analytics-pii"
+     ]
+    },
+    {
+     "id": "before",
+     "text": "before_send scrubbing",
+     "any": [
+      "before_send"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "metric-definitions",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/metrics-dashboards"
+   ],
+   "prompt": "Three dashboards show three different 'active users' numbers. What do we do?",
+   "rubric": [
+    {
+     "id": "spec",
+     "text": "one written metric spec (definition, grain, owner)",
+     "any": [
+      "owner|grain"
+     ]
+    },
+    {
+     "id": "one-place",
+     "text": "definitions in one place (dbt/semantic layer)",
+     "any": [
+      "semantic|dbt"
+     ]
+    },
+    {
+     "id": "hygiene",
+     "text": "dashboard hygiene: date, filters, freshness",
+     "any": [
+      "fresh"
+     ]
+    },
+    {
+     "id": "deprecate",
+     "text": "delete or archive unused dashboards",
+     "any": [
+      "archiv|delete|unused"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "anonymise-export",
+   "pack": "data-ml",
+   "refs": [
+    "analytics/privacy-anonymisation"
+   ],
+   "prompt": "Researchers want our transaction data; we'll hash the phone numbers first. Is that anonymous?",
+   "rubric": [
+    {
+     "id": "pseudo",
+     "text": "hashing is pseudonymisation, still personal data",
+     "any": [
+      "[Pp]seudonymi"
+     ]
+    },
+    {
+     "id": "reid",
+     "text": "re-identification evidence (Rocher, Netflix)",
+     "any": [
+      "Rocher|Netflix|re-identif"
+     ]
+    },
+    {
+     "id": "kanon",
+     "text": "k-anonymity limits",
+     "any": [
+      "k-anonymity"
+     ]
+    },
+    {
+     "id": "dp",
+     "text": "differential privacy for released statistics",
+     "any": [
+      "differential privacy"
+     ]
+    }
+   ]
+  }
+ ]
+}
