@@ -67,3 +67,26 @@ Teaching mode is on by default for new projects. Agents explain each decision in
 
 ## packs | tokens | context
 Agents read instructions on every request, and that costs tokens and attention. eos keeps the always-on part small (AGENTS.md core rules) and loads **packs** only when needed: by file path (e.g. migration docs) or as skills chosen by their one-line description. Budgets are checked by `eos check`; `eos budget` shows the numbers.
+
+## pr-flow | story-loop | pull-request | pr | branch | merge
+How one story goes from idea to `main`. Every step says where to type it: the **terminal**, your **agent chat** (Cline or Cursor), or the **GitHub** website. Your agent can run the terminal steps for you: just ask it.
+1. **Branch** (terminal): `git switch main && git pull`, then `git switch -c feat/<short-name>`. A branch is a private copy of the code where you can work without touching `main`.
+2. **Build** (agent chat): paste the prompt `eos next` gives you. The agent writes the tests first, then the code.
+3. **Check** (terminal): `python3 .eos/bin/eos.py verify` runs the checks this change needs. Fix anything red before going on.
+4. **Commit** (terminal): `git add -A` then `git commit -m "feat: <what changed>"`. A commit is a saved snapshot with a message.
+5. **Pull request** (terminal): `git push -u origin HEAD` then `gh pr create --fill`. A **pull request (PR)** is a page on GitHub that shows the change so it can be reviewed before it joins `main`.
+6. **CI** (GitHub, the PR's *Checks* tab, or `gh pr checks` in the terminal): **CI** means GitHub re-runs the checks on its own computers. Wait until they are green (about 2 to 10 minutes).
+7. **Approval label, only when the test-integrity check is red** (GitHub or terminal): a reviewer reads the test changes, and if they are honest adds the `test-change-approved` label with `gh pr edit <PR number> --add-label test-change-approved`. See `eos explain test-integrity`.
+8. **Merge** (GitHub's *Merge* button, or `gh pr merge --squash --delete-branch`): the change joins `main`. Then `git switch main && git pull`.
+9. **Next story**: set the story's `**Status:**` line to `done` and run `eos next`.
+`gh` is the GitHub command-line tool (https://cli.github.com); run `gh auth login` once. Without it, do steps 5 to 8 on the GitHub website.
+
+## test-integrity | test-change-approved | label | labels
+**Test integrity** is a check that runs on every pull request. It compares the PR with `main` and stops it when the change could make the tests prove less than before: a test skipped or deleted, an `assert` removed, a coverage or score threshold lowered, or a "ignore this error" comment added in risky code. This stops anyone (an AI agent included) from turning checks green by weakening them.
+Sometimes the change is honest: a test rewritten because the feature changed, or an old test replaced by a better one. Then a human confirms it by adding the GitHub **label** (a tag on the PR) `test-change-approved`, and the check stops blocking.
+Who adds it: the reviewer, never the agent that wrote the change. How: read the changed tests on the PR's *Files changed* tab; if they are fine, either click *Labels* > `test-change-approved` on the PR page, or run `gh pr edit <PR number> --add-label test-change-approved` in the terminal. GitHub re-runs the checks by itself. If `gh` answers that the label is not found, create it once per repo: `gh label create test-change-approved`, then run the `gh pr edit` line again.
+If the change is NOT honest (a test was weakened to hide a bug), don't add the label: ask the agent to restore the test and fix the code instead.
+Run it on your machine before pushing: `python3 .eos/bin/eos.py test-integrity --base origin/main`.
+
+## handoff | hand-off | end-of-task
+At the end of every story or task, an agent following eos ends with a plain-words hand-off: what it did, what it verified (which checks ran and their result), and the one next action, saying where to do it (terminal, agent chat or GitHub) and offering to do the git and pull-request steps itself. Any eos or CI name is explained in a few words. If an agent hands you jargon, reply "explain that in plain words and tell me exactly what to type and where", or run `eos where`.

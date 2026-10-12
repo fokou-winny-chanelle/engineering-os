@@ -4613,7 +4613,7 @@ def gate_problems(nf: dict) -> list[str]:
     if ra:
         bad = [n for n, v in ra.get("checks", {}).items() if v.get("status") == "new"]
         if bad:
-            out.append(f"ratchet found new violations in {', '.join(bad)}")
+            out.append(f"new code problems in {', '.join(bad)} (old ones are allowed, new ones are not)")
     return out
 
 
@@ -4640,8 +4640,8 @@ def nav_status(root: Path, m: dict) -> dict:
     for g in gate_problems(nf):
         blockers.append(
             {
-                "say": f"Fix the failing gate: {g}",
-                "why": "red gates first: everything else builds on them",
+                "say": f"Fix a failing automatic check: {g}",
+                "why": "red checks first: everything else builds on them (ask your agent to read the error and fix it)",
                 "cmd": "eos check && eos ratchet check",
             }
         )
@@ -4689,6 +4689,7 @@ def nav_status(root: Path, m: dict) -> dict:
                     "say": f"Continue story {s['title']} ({s['status']})",
                     "why": "finish what is started before starting more (limits work in progress)",
                     "prompt": f"Continue {s['path']}: implement the remaining acceptance criteria as tests, then the full check.",
+                    "story": s,
                 }
             )
     for pl in nf["plans"]:
@@ -4726,6 +4727,7 @@ def nav_status(root: Path, m: dict) -> dict:
                     "say": f"Next story: {s['title']} ({s['status']})",
                     "why": "small stories with acceptance criteria keep every change verifiable",
                     "prompt": f"Implement {s['path']}: acceptance criteria as tests first, then code; full check before done.",
+                    "story": s,
                 }
                 break
         step = {k: c[k] for k in ("cmd", "prompt", "options", "teach", "tip") if k in c} | (
@@ -4765,7 +4767,7 @@ def nav_status(root: Path, m: dict) -> dict:
         "skipped": sorted(skips),
         "in_progress": wip,
         "next": nxt,
-        "git": {"branch": nf["branch"], "dirty": nf["dirty"]},
+        "git": {"branch": nf["branch"], "dirty": nf["dirty"], "protected": nf["protected"]},
         "stories": {
             "open": sum(1 for s in nf["stories"] if s["status"] != "done"),
             "done": sum(1 for s in nf["stories"] if s["status"] == "done"),
@@ -4843,6 +4845,8 @@ def render_next(st: dict, brief: bool = False) -> str:
         lines.append(f"How: {act}")
     if n.get("tip"):
         lines.append(f"Tip: {n['tip']}")
+    if n.get("story"):
+        lines += story_loop(n["story"], st.get("git") or {}, chat)
     if n.get("bmad"):
         lines.append(f"  or with BMAD: run the `{n['bmad']}` skill (`bmad-help` shows BMAD's own next step)")
     if teach:
@@ -4856,6 +4860,53 @@ def render_next(st: dict, brief: bool = False) -> str:
     if more > 0:
         lines.append(f"(+{more} more item(s) waiting: `eos status`)")
     return "\n".join(lines)
+
+
+def _slug(title: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:32].strip("-") or "story"
+
+
+def story_loop(story: dict, git: dict, chat: str) -> list[str]:
+    """The whole loop for one story, each step saying where to type it, with a marker on the likely current step.
+    People new to git/PRs got stuck between "code written" and "merged"; this spells out every hop."""
+    br = f"feat/{_slug(story.get('title', ''))}"
+    on_branch = bool(git.get("branch")) and not git.get("protected")
+    here = 1 if not on_branch else (3 if git.get("dirty") else (5 if story.get("status") == "review" else 2))
+    steps = [
+        (
+            "terminal",
+            "Start a branch (a private copy to work on)",
+            f"git switch main && git pull && git switch -c {br}",
+        ),
+        (chat, "Build it: paste the prompt above", ""),
+        ("terminal", "Check it (fix anything red first)", "python3 .eos/bin/eos.py verify"),
+        ("terminal", "Save it as a commit", f'git add -A && git commit -m "feat: {story.get("title", "")[:50]}"'),
+        (
+            "terminal",
+            "Open a pull request (a GitHub page to review it)",
+            "git push -u origin HEAD && gh pr create --fill",
+        ),
+        ("GitHub", "Wait for the automatic checks (CI) to turn green", "gh pr checks --watch"),
+        (
+            "GitHub",
+            "Only if 'test-integrity' is red: a human reviews the test changes, then approves them",
+            "gh pr edit <PR number> --add-label test-change-approved",
+        ),
+        (
+            "GitHub",
+            "Merge, then come back to main",
+            "gh pr merge --squash --delete-branch && git switch main && git pull",
+        ),
+        ("story file", f"Set '**Status:** done' in {story.get('path', 'the story')}, then", "eos next"),
+    ]
+    out = ["The full loop for this story (where to type each step; your agent can run the terminal ones for you):"]
+    for i, (where, what, cmd) in enumerate(steps, 1):
+        mark = "  <- you are probably here" if i == here else ""
+        out.append(f"  {i}. [{where}] {what}{mark}")
+        if cmd:
+            out.append(f"       {cmd}")
+    out.append("  What steps 5-8 mean: `eos explain pr-flow` · the approval label: `eos explain test-integrity`")
+    return out
 
 
 def render_status(st: dict) -> str:
@@ -4934,6 +4985,59 @@ def cmd_next(args: argparse.Namespace) -> int:
         print(json.dumps({k: st[k] for k in ("mode", "phase", "next", "blockers")}, indent=2, default=str))
     else:
         print(render_next(st, brief=args.brief))
+    return 0
+
+
+WHERE_FOOTER = """Handy commands (type them in the terminal, in your project folder):
+  eos where            this overview, any time you feel lost (also: eos help me)
+  eos next             only the next step
+  eos status           every phase and what is missing
+  eos check            are eos's own checks OK?
+  eos explain pr-flow  how a change goes from your branch to main, step by step
+  eos explain <word>   any eos word in plain language (test-integrity, ratchet, lane, adr...)
+Your agent said something you don't understand? Paste this into its chat:
+  "Explain that in plain words, and tell me exactly what to type and where (terminal, chat or GitHub)."
+"""
+
+
+def cmd_where(args: argparse.Namespace) -> int:
+    root = Path(args.dir).resolve()
+    m = load_manifest(root)
+    if not m:
+        print(
+            "This folder is not set up with eos yet.\n"
+            "  A new product idea?        type: eos start\n"
+            "  Code that already exists?  type: eos adopt\n"
+            "Either one asks a few plain questions and then tells you the next step.\n"
+        )
+        print(WHERE_FOOTER.rstrip())
+        return 0
+    st = nav_status(root, m)
+    st["teaching"] = "on"  # this command is for people who want the plain version, whatever the agent setting
+    st["next"].pop("_label", None)
+    sym = {"done": "done", "current": "NOW ", "todo": "    ", "skipped": "skip"}
+    mode = st["mode"]
+    out = [
+        f"Where you are in {root.name}, in plain words",
+        f"  Project type: {mode} ({MODE_PLAIN.get(mode, '-')}); repo shape: {shape_label(st['topology'])}",
+    ]
+    if st["phases"]:
+        n_done = sum(p["state"] == "done" for p in st["phases"])
+        out.append(f"  The road ({n_done} of {len(st['phases'])} stages done):")
+        for p in st["phases"]:
+            out.append(f"    [{sym.get(p['state'], '    ')}] {p['title']}")
+        if st["phase"]:
+            out.append(f"  This stage's goal: {st['phase_goal']}")
+    s = st["stories"]
+    if s["open"] or s["done"]:
+        out.append(f"  Stories (small pieces of work): {s['done']} done, {s['open']} to go")
+    g = st["git"]
+    if g.get("branch"):
+        state = f"{g['dirty']} unsaved change(s)" if g["dirty"] else "everything committed"
+        kind = "the main branch (changes reach it through pull requests)" if g.get("protected") else "a work branch"
+        out.append(f"  Git: you are on '{g['branch']}', {kind}; {state}")
+    out += ["", "What to do now:", render_next(st), "", WHERE_FOOTER.rstrip()]
+    print("\n".join(out))
     return 0
 
 
@@ -7608,13 +7712,36 @@ def cmd_test_integrity(args: argparse.Namespace) -> int:
                 print("  warn: " + x + " (say why in the PR)")
             findings = [f for f in findings if f not in soft]
     if findings:
-        print("eos test-integrity: changes that can weaken verification (a human must approve):")
+        print("eos test-integrity: STOPPED. This change could make the tests prove less than before:")
         for x in findings:
             print("  - " + x)
-        print("If intended: explain why in the PR, get review, then add the label 'test-change-approved'.")
+        print(test_integrity_help(os.environ))
         return 1
     print("eos test-integrity: OK (no new skips/suppressions, no removed asserts, no lowered thresholds)")
     return 0
+
+
+def test_integrity_help(env: dict) -> str:
+    """Plain explanation + the exact fix, printed when test-integrity blocks (locally or in CI)."""
+    m = re.match(r"refs/pull/(\d+)/", env.get("GITHUB_REF", ""))
+    pr = m.group(1) if m else "<PR number>"
+    return "\n".join(
+        [
+            "",
+            "What this means: tests, asserts or check thresholds were removed, skipped or loosened. That is",
+            "sometimes honest (a feature changed, a test was replaced by a better one) and sometimes a way to",
+            "hide a bug, so a human has to look before this can be merged.",
+            "What to do:",
+            "  1. Read the changed test lines listed above (on GitHub: the PR's 'Files changed' tab).",
+            "  2. Honest change? A reviewer (not the agent that wrote it) approves it by adding the label",
+            "     'test-change-approved' to the PR: on the PR page click Labels, or in the terminal run",
+            f"       gh pr edit {pr} --add-label test-change-approved",
+            "     (first time in this repo: gh label create test-change-approved). The checks re-run by themselves.",
+            "  3. Not honest? Don't add the label. Ask your agent: \"Restore the weakened test and fix the code",
+            '     instead."',
+            "More: `python3 .eos/bin/eos.py explain test-integrity`",
+        ]
+    )
 
 
 # ----------------------------------------------------------------------------- testing gates (stage 5)
@@ -13980,6 +14107,13 @@ def build_parser() -> argparse.ArgumentParser:
     ex.add_argument("topic", nargs="?")
     ex.add_argument("--dir", default=".")
     ex.set_defaults(fn=cmd_explain)
+
+    wh = sub.add_parser(
+        "where", aliases=["help"], help="lost? a plain-language overview: where you are, what's done, what to do next"
+    )
+    wh.add_argument("words", nargs="*", help=argparse.SUPPRESS)  # `eos help me` reads naturally
+    wh.add_argument("--dir", default=".")
+    wh.set_defaults(fn=cmd_where)
 
     wsp = sub.add_parser("workspace", help="multi-repo workspace: init | add | status | sync | change")
     wsp.add_argument("action", choices=["init", "add", "status", "sync", "change"])

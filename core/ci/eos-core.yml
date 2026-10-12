@@ -28,7 +28,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
           EOS_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
         run: python3 .eos/bin/eos.py lane --ci --base "origin/${BASE_REF}"
-      - name: Test integrity (new skips, removed asserts, lowered thresholds)
+      - name: Test integrity (blocks weakened tests; if red, the log explains why and how a reviewer approves)
         if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'test-change-approved')
         env:
           BASE_REF: ${{ github.base_ref }}

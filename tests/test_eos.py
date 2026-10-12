@@ -1779,6 +1779,79 @@ class NavigatorTests(unittest.TestCase):
         self.assertIn("seam", out)
 
 
+class PlainGuidanceTests(unittest.TestCase):
+    """v0.7.2 usability: plain hand-offs, the story loop, `eos where`, and the test-integrity explanation."""
+
+    def test_explain_pr_flow_and_test_integrity(self):
+        rc, out = run_eos("explain", "pr-flow")
+        self.assertEqual(rc, 0)
+        for s in ("terminal", "GitHub", "gh pr create", "test-change-approved", "Merge"):
+            self.assertIn(s, out)
+        rc, out = run_eos("explain", "test-change-approved")  # the label name finds the same entry
+        self.assertEqual(rc, 0)
+        self.assertIn("gh pr edit <PR number> --add-label test-change-approved", out)
+        self.assertIn("never the agent", out)
+        self.assertEqual(run_eos("explain", "handoff")[0], 0)
+
+    def test_core_rules_require_a_plain_hand_off(self):
+        core = (REPO / "core/AGENTS.core.md").read_text(encoding="utf-8")
+        self.assertIn("End each task in plain words", core)
+        self.assertIn("terminal, this chat or GitHub", core)
+        self.assertIn("Gloss internal names", core)
+
+    def test_story_loop_in_next_and_where(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            git_init(root)
+            quiet(eos.main, ["init", str(root)])
+            (root / "docs/stories").mkdir(parents=True, exist_ok=True)
+            (root / "docs/stories/0001-m0.md").write_text(
+                "# M0: Foundation\n**Status:** in progress\n", encoding="utf-8", newline="\n"
+            )
+            sh(["git", "add", "-A"], root)
+            sh(["git", "commit", "-qnm", "init"], root)
+            rc, out = run_eos("next", str(root))
+            self.assertEqual(rc, 0)
+            for s in ("[terminal]", "[GitHub]", "git switch -c feat/m0-foundation", "gh pr create --fill",
+                      "gh pr edit <PR number> --add-label test-change-approved", "eos explain pr-flow"):  # fmt: skip
+                self.assertIn(s, out)
+            self.assertIn("1. [terminal] Start a branch (a private copy to work on)  <- you are probably here", out)
+            sh(["git", "switch", "-qc", "feat/m0"], root)
+            (root / "x.txt").write_text("x\n", encoding="utf-8", newline="\n")
+            out = run_eos("next", str(root))[1]
+            self.assertIn("3. [terminal] Check it (fix anything red first)  <- you are probably here", out)
+            self.assertNotIn("[terminal]", run_eos("next", str(root), "--brief")[1])  # one line stays one line
+            for argv in (["where", "--dir", str(root)], ["help", "me", "--dir", str(root)]):
+                rc, out = run_eos(*argv)
+                self.assertEqual(rc, 0)
+                self.assertIn("in plain words", out)
+                self.assertIn("1 to go", out)
+                self.assertIn("a work branch", out)
+                self.assertIn("What to do now:", out)
+                self.assertIn("Explain that in plain words", out)
+
+    def test_where_outside_a_project(self):
+        with tempfile.TemporaryDirectory() as d:
+            rc, out = run_eos("where", "--dir", d)
+            self.assertEqual(rc, 0)
+            self.assertIn("eos start", out)
+            self.assertIn("eos adopt", out)
+
+    def test_test_integrity_failure_explains_the_fix(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            make_lane_repo(root)
+            (root / "tests/test_util.py").write_text(
+                "import pytest\n\n\n@pytest.mark.skip\ndef test_add():\n    pass\n", encoding="utf-8", newline="\n"
+            )
+            rc, out = run_eos("test-integrity", str(root), "--base", "main")
+            self.assertEqual(rc, 1)
+            self.assertIn("What this means", out)
+            self.assertIn("gh pr edit <PR number> --add-label test-change-approved", out)
+            self.assertIn("not the agent", out)
+        self.assertIn("gh pr edit 42 ", eos.test_integrity_help({"GITHUB_REF": "refs/pull/42/merge"}))
+
+
 class TopologyFixtureTests(unittest.TestCase):
     def test_modular_monolith(self):
         with tempfile.TemporaryDirectory() as d:

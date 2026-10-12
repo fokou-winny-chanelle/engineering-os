@@ -2,6 +2,20 @@
 All notable changes to engineering-os. Format: Keep a Changelog · Versioning: SemVer.
 
 ## [Unreleased]
+### Changed: eos guides a non-expert through every step, in plain words
+- Agents end each task with a plain hand-off (core rule 9): what was done, what was verified, the next step with
+  where to type it (terminal, agent chat or GitHub), an offer to do the git/PR steps, and a gloss for internal names.
+  Rule 2's reporting detail moved into it, so the always-on core stays under 700 tokens.
+- `eos next` on a story shows the whole loop: branch, build, verify, commit, pull request, CI, the
+  `test-change-approved` label (only when test-integrity is red, added by a reviewer with
+  `gh pr edit <n> --add-label test-change-approved`), merge, next story; each step tagged with where to type it and
+  a marker on the likely current step (from the branch and uncommitted changes).
+- New `eos where` (also `eos help me`): a plain overview of the stages, stories, git state, the next step and the
+  handy commands, plus a sentence to paste when an agent's reply is unclear.
+- New `eos explain pr-flow`, `eos explain test-integrity` (also `test-change-approved`, `label`) and `eos explain handoff`.
+- `eos test-integrity` failures explain what was caught, why a human must look, and the exact fix (the PR number is
+  filled in on GitHub Actions); the CI step name says the log explains it. Gate blockers in `eos next` read
+  "a failing automatic check" instead of "gate", and ratchet findings say "new code problems".
 ### Changed: the repo shape of a new project is decided at the architecture step
 - A greenfield project without code records its shape as `undecided` and shows "not decided yet (chosen at the
   architecture step)" in init/start output, `eos status` and AGENTS.md (a 2-line block telling agents not to create
