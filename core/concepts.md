@@ -69,17 +69,21 @@ Teaching mode is on by default for new projects. Agents explain each decision in
 Agents read instructions on every request, and that costs tokens and attention. eos keeps the always-on part small (AGENTS.md core rules) and loads **packs** only when needed: by file path (e.g. migration docs) or as skills chosen by their one-line description. Budgets are checked by `eos check`; `eos budget` shows the numbers.
 
 ## pr-flow | story-loop | pull-request | pr | branch | merge
-How one story goes from idea to `main`. Every step says where to type it: the **terminal**, your **agent chat** (Cline or Cursor), or the **GitHub** website. Your agent can run the terminal steps for you: just ask it.
-1. **Branch** (terminal): `git switch main && git pull`, then `git switch -c feat/<short-name>`. A branch is a private copy of the code where you can work without touching `main`.
-2. **Build** (agent chat): paste the prompt `eos next` gives you. The agent writes the tests first, then the code.
-3. **Check** (terminal): `python3 .eos/bin/eos.py verify` runs the checks this change needs. Fix anything red before going on.
-4. **Commit** (terminal): `git add -A` then `git commit -m "feat: <what changed>"`. A commit is a saved snapshot with a message.
-5. **Pull request** (terminal): `git push -u origin HEAD` then `gh pr create --fill`. A **pull request (PR)** is a page on GitHub that shows the change so it can be reviewed before it joins `main`.
-6. **CI** (GitHub, the PR's *Checks* tab, or `gh pr checks` in the terminal): **CI** means GitHub re-runs the checks on its own computers. Wait until they are green (about 2 to 10 minutes).
-7. **Approval label, only when the test-integrity check is red** (GitHub or terminal): a reviewer reads the test changes, and if they are honest adds the `test-change-approved` label with `gh pr edit <PR number> --add-label test-change-approved`. See `eos explain test-integrity`.
-8. **Merge** (GitHub's *Merge* button, or `gh pr merge --squash --delete-branch`): the change joins `main`. Then `git switch main && git pull`.
-9. **Next story**: set the story's `**Status:**` line to `done` and run `eos next`.
-`gh` is the GitHub command-line tool (https://cli.github.com); run `gh auth login` once. Without it, do steps 5 to 8 on the GitHub website.
+How one story goes from idea to `main`. With **autopilot** on (the default, `eos explain autopilot`) you only do step 1 and, rarely, step 4.
+1. **Build** (agent chat): paste the prompt `eos next` gives you. The agent writes the tests first, then the code, and runs `python3 .eos/bin/eos.py verify` until it is green.
+2. **Ship** (the agent does it): `python3 .eos/bin/eos.py ship --story <story file>` makes a **branch** (a private copy of the code), a **commit** (a saved snapshot), pushes it, marks the story done and opens a **pull request (PR)**: a GitHub page showing the change before it joins `main`.
+3. **Checks** (automatic, on GitHub): **CI** re-runs every check on GitHub's computers, and the **eos review** check decides whether a person must look. All green and nothing sensitive: the PR merges by itself and its branch is deleted.
+4. **Only if asked** (GitHub): a PR that touches login, personal data, money, the database, CI or the tests gets the label `needs-human`, and you are mentioned in a comment saying why. Read the *Files changed* tab; if it is fine, add the label `human-approved` (`gh pr edit <PR number> --add-label human-approved`) and it merges itself.
+5. **Next story** (terminal): `git switch main && git pull`, then `eos next`.
+With autopilot off, you do steps 2 to 4 yourself: `git switch -c feat/<name>`, `git add -A`, `git commit -m "feat: ..."`, `git push -u origin HEAD`, `gh pr create --fill`, `gh pr checks --watch`, then `gh pr merge --squash --delete-branch`.
+`gh` is the GitHub command-line tool (https://cli.github.com); run `gh auth login` once.
+
+## autopilot | auto-merge | needs-human | human-approved | eos-review | ship
+**Autopilot** lets pull requests merge themselves, so you don't have to click Merge after every story. GitHub does not let you approve your own pull request, so the reviewer is a check instead of a person: the **eos review** job (in `.github/workflows/eos-autopilot.yml`) reads each PR. It sorts the change by risk (the lane) and looks for weakened tests or changed checks. If an `OPENROUTER_API_KEY` secret exists, it also posts an AI review comment, which is advice only.
+- **Safe change**: when every check is green, the `eos autopilot merge` job squash-merges it and deletes the branch.
+- **Sensitive change** (login, personal data, money, database migrations, CI or check settings, weakened tests): the PR gets the label `needs-human`, you are @-mentioned in a comment explaining why, and the eos review check stays red. You read it and add `human-approved`, and it merges itself. Agents never add that label.
+Set it up once per repo: `eos autopilot setup` (needs `gh auth login`). It allows squash merge and auto-merge, deletes branches after merge, creates the labels, and asks GitHub to require the green `eos review` check on `main` (no human approval needed). GitHub Free has no branch protection for private repos; autopilot still works there, the only difference being that GitHub won't stop someone clicking Merge on a red PR.
+Turn it off or on: `eos autopilot off` / `eos autopilot on`. Merges by the default token don't start other workflows (a GitHub rule): for a deploy-on-main workflow, add a fine-grained token as the secret `EOS_AUTOPILOT_TOKEN`.
 
 ## test-integrity | test-change-approved | label | labels
 **Test integrity** is a check that runs on every pull request. It compares the PR with `main` and stops it when the change could make the tests prove less than before: a test skipped or deleted, an `assert` removed, a coverage or score threshold lowered, or a "ignore this error" comment added in risky code. This stops anyone (an AI agent included) from turning checks green by weakening them.

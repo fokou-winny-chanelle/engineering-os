@@ -4,14 +4,14 @@
 3. Keep checks honest. Don't delete, skip or loosen tests, asserts, thresholds or lint rules, or add ignore comments to get green. Leave CI, hooks, lockfiles and `.eos/` alone unless that is the task. If a test looks wrong, explain why and ask.
 4. Secrets: don't open `.env*` or key files; refer to env var names only. The guard hook blocks these reads.
 5. Money, auth, crypto, PII, migrations or infra changes need human review: list those files in the PR summary.
-6. Ask one question only when requirements, money rules or security behaviour are unclear. Otherwise pick the conventional option, state the assumption and continue.
-7. Follow existing patterns. For a new dependency, say why and confirm the package exists.
+6. Ask one question only when requirements, money rules or security behaviour are unclear. Otherwise pick the conventional option, state it and continue.
+7. Follow existing patterns. New dependency: say why, confirm the package exists.
 8. On `spike/*` branches: no tests, plans or docs; the code is thrown away. On `hotfix/*`: smallest fix plus a regression test, no refactors.
-9. End each task in plain words: what you did, what you verified (a line per check; say what you skipped), and the next step: where (terminal, this chat or GitHub) and what to type. Offer to do git/PR steps. Gloss internal names (test-integrity, labels).
+9. When `eos verify` passes, run `python3 .eos/bin/eos.py ship --story <file>` yourself: it opens the PR, which merges on green. Never add approval labels. End each task in plain words: what you did and verified, the PR link, the next step: where (terminal, this chat or GitHub) and what to type.
 
 ## When stuck
 - The same check fails after 3 real fix attempts, or the same command gives the same result 3 times: stop, write `memory/handoff.md` (≤30 lines: goal, failing command, what you tried, next step) and ask. The hooks enforce this.
-- Two failed attempts at a hard bug or design: say so and suggest a stronger model or a fresh session.
+- Two failed attempts at a hard bug: suggest a stronger model or a fresh session.
 - The diff grows well past the plan, or reaches a path in `.eos/protected.txt`: re-plan.
 
 ## Context

@@ -60,6 +60,8 @@ Personal preferences (language, answer style, defaults) go in `personal/PROFILE.
 
 ```sh
 eos next              # the one next step, why, and the exact command or agent prompt
+eos ship              # (the agent runs it) branch, commit, PR; autopilot merges it on green checks
+eos autopilot setup   # once per repo: merge settings, labels, required check (eos explain autopilot)
 eos verify            # the checks this change needs, sized to its lane (agents run it too)
 eos lane              # trivial / standard / risky / one-way-door, why, and what that requires
 eos spike try-redis   # throwaway branch: no tests or plans, guards still on, never merged

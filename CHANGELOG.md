@@ -2,6 +2,37 @@
 All notable changes to engineering-os. Format: Keep a Changelog · Versioning: SemVer.
 
 ## [Unreleased]
+### Added: autopilot, pull requests that merge themselves (field report: fwc-me, a solo private repo)
+- New `eos ship [--story <file> | --title "..."] [--wait]`, run by the agent after `eos verify` passes: branches off
+  main if needed, marks the story `done`, commits (with a `Story:` trailer), pushes, opens the PR with the
+  `autopilot` label and arms GitHub auto-merge where the plan allows it.
+- New workflow `.github/workflows/eos-autopilot.yml` (installed with eos-core). Job `eos review` is the reviewer
+  (GitHub forbids approving your own PR): lane + test integrity + gate-config check. PRs that touch login, personal
+  data, money, migrations, CI/check config or weaken tests get `needs-human`, a comment @-mentioning the owner with a
+  plain explanation and the fix, and a red check; a person adds `human-approved` to release them. Optional advisory
+  AI review comment with the secret `OPENROUTER_API_KEY` (model: variable `EOS_REVIEW_MODEL`), never blocking.
+  Job `eos autopilot merge` squash-merges once every other check on the PR is green. Works on GitHub Free private
+  repos (no branch protection or auto-merge needed there); `EOS_AUTOPILOT_TOKEN` lets the merge start deploy workflows.
+- New `eos review` (local or `--ci`) and `eos autopilot status|on|off|setup|merge`. On by default; `setup` allows
+  squash/auto-merge, deletes merged branches, creates the labels and requires the `eos review` check on main where
+  the plan allows (explains plainly when GitHub Free refuses branch protection on a private repo).
+- Core rule 9: the agent ships the story itself and never adds approval labels. `eos next` in Build shows the
+  autopilot loop (agent ships, GitHub checks and merges, you only act on `needs-human`); `eos explain autopilot`;
+  `eos explain pr-flow` rewritten around it.
+### Fixed
+- `eos next` after the first story merged told you to "Commit the eos setup on a branch" (`chore/add-eos`) whenever
+  eos had rewritten `.eos/manifest.json` on main. Bookkeeping-only changes are now a note; real eos files changed
+  on main after the setup was committed read "Ship the eos update ... as its own pull request" (`eos ship`).
+- Story status follows main's history: a story whose file or milestone key (`0002-m1-...` -> `m1`, as in
+  `feat/m1-...` or "feat: M1 ...") appears in main's first-parent log counts as done, with a note to update the file.
+- `eos verify` output is grouped: PASSED, FAILED (each with its fix), NEEDS HUMAN REVIEW (not a failure; test
+  integrity findings and sensitive paths, each once), INFO (coverage not measured, bundle-size hints), then a verdict
+  naming the failed checks and the next action. Failing output is cut at whole lines (it used to cut mid-line,
+  "fig changed (review it carefully)") and repeated lines are shown once.
+- The first commit of a new repo was refused on main by pre-commit's `no-commit-to-branch`, although `eos next` asked
+  for it. It is replaced by `eos protect-branch`, which allows the very first commit and refuses later ones on
+  main/master with the branch command (or `eos ship`).
+
 ### Changed: eos guides a non-expert through every step, in plain words
 - Agents end each task with a plain hand-off (core rule 9): what was done, what was verified, the next step with
   where to type it (terminal, agent chat or GitHub), an offer to do the git/PR steps, and a gloss for internal names.

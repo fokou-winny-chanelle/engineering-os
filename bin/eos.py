@@ -2100,6 +2100,7 @@ def cmd_init(args: argparse.Namespace, update: bool = False) -> int:
             )
     if not args.no_ci:
         w.managed(".github/workflows/eos-core.yml", read(home / "core/ci/eos-core.yml"))
+        w.managed(".github/workflows/eos-autopilot.yml", read(home / "core/ci/eos-autopilot.yml"))
         for rel, txt in render_ci_all(home, cfg["stacks"], cfg["pm"]):
             w.managed(rel, txt)
     # 5. manifest
@@ -4358,6 +4359,7 @@ def cmd_adopt(args: argparse.Namespace) -> int:
         if scan["facts"]["ci"] and not args.no_ci and not args.dry_run:
             w = Writer(root, m, False, False, adopt=True)
             w.managed(".github/workflows/eos-core.yml", read(home / "core/ci/eos-core.yml"))
+            w.managed(".github/workflows/eos-autopilot.yml", read(home / "core/ci/eos-autopilot.yml"))
             save_manifest(root, m)
     ratchet_rep: list[tuple[str, str]] = []
     reconf = getattr(args, "reconfigure", False)  # new answers don't change what your code does today
@@ -4499,6 +4501,25 @@ def plan_items(root: Path) -> list[dict]:
     return items
 
 
+def merged_story_keys(root: Path) -> str:
+    """Subjects + bodies of what landed on main (first parent): squash titles, merge commits, `Story:` trailers."""
+    ref = next((r for r in ("origin/main", "main", "origin/master", "master")
+                if git_out(root, "rev-parse", "-q", "--verify", r + "^{commit}")), "")  # fmt: skip
+    return git_out(root, "log", "--first-parent", "--format=%s%n%b", "-n", "400", ref) if ref else ""
+
+
+def story_merged(path: str, log: str) -> bool:
+    """A story counts as merged when main's history names its file (`Story: docs/stories/0002-...`) or its
+    milestone key from the file name (0002-m1-design.md -> m1, as in `feat/m1-...` or "feat: M1 ...")."""
+    if not log:
+        return False
+    stem = Path(path).stem
+    if stem in log:
+        return True
+    km = re.match(r"\d+-([a-z]{1,3}\d+)(?:-|$)", stem)
+    return bool(km) and re.search(rf"(?i)(?<![\w.]){re.escape(km.group(1))}(?![\w.])", log) is not None
+
+
 def nav_facts(root: Path, m: dict) -> dict:
     stories = []
     for p in _globs(root, "docs/stories/[0-9]*.md"):
@@ -4506,6 +4527,10 @@ def nav_facts(root: Path, m: dict) -> dict:
         st = (sm.group(1).strip().lower() if sm else "draft").split("|")[0].strip()
         title = read(p).splitlines()[0].lstrip("# ").strip() if read(p) else p.stem
         stories.append({"path": p.relative_to(root).as_posix(), "status": st, "title": title})
+    merged = merged_story_keys(root) if stories and (root / ".git").exists() else ""
+    for s in stories:  # merged on main but the file still says otherwise: the git history wins
+        if s["status"] != "done" and story_merged(s["path"], merged):
+            s["status"], s["inferred"] = "done", True
     plans = []
     for p in _globs(root, "docs/plans/[0-9]*.md"):
         sm = re.search(r"(?m)^Status:\s*(\w+)", read(p))
@@ -4521,7 +4546,7 @@ def nav_facts(root: Path, m: dict) -> dict:
     eos_new = [p.relative_to(root).as_posix() for p in root.rglob("*.eos-new") if ".git" not in p.parts][:5]
     hand = root / "memory/handoff.md"
     handoff = bool(hand.exists() and re.search(r"(?m)^- \*\*(Goal|Next step):\*\*[ \t]*\S", read(hand)))
-    branch, dirty, setup_only = "", 0, False
+    branch, dirty, setup_only, housekeeping, setup_committed = "", 0, False, False, False
     if (root / ".git").exists():
         branch = git_out(root, "symbolic-ref", "--short", "-q", "HEAD")
         status = git_out(root, "status", "--porcelain", "-uall").splitlines()
@@ -4531,6 +4556,10 @@ def nav_facts(root: Path, m: dict) -> dict:
         prefixes = (".eos/", "memory/", "docs/adr/", "docs/ai/", "docs/eos/", "docs/plans/", ".github/")
         prefixes += ("docs/architecture/services.md", "docs/architecture/modules.md", ".claude/", ".cursor/", ".cline/")
         setup_only = bool(changed) and all(c in eos_paths or c.startswith(prefixes) for c in changed)
+        housekeeping = bool(changed) and all(
+            c in (".eos/manifest.json",) or c.startswith(".eos/state/") for c in changed
+        )
+        setup_committed = bool(git_out(root, "ls-files", "AGENTS.md", ".eos/manifest.json"))
     try:
         cfgj = json.loads(read(root / ".eos/config.json")) if (root / ".eos/config.json").exists() else {}
     except ValueError:
@@ -4548,6 +4577,9 @@ def nav_facts(root: Path, m: dict) -> dict:
         "dirty": dirty,
         "protected": bool(branch) and any(fnmatch.fnmatch(branch, g) for g in prot),
         "setup_only": setup_only,
+        "housekeeping": housekeeping,
+        "setup_committed": setup_committed,
+        "changed": changed if (root / ".git").exists() else [],
         "facts": f,
         "bmad": (root / "_bmad").is_dir(),
         "shape_decided": m.get("topology") != UNDECIDED or (root / WS_FILE).exists(),
@@ -4617,6 +4649,13 @@ def gate_problems(nf: dict) -> list[str]:
     return out
 
 
+def ship_tail(root: Path, story: str) -> str:
+    if not autopilot_on(root):
+        return ""
+    return (f" When `eos verify` passes, run `python3 .eos/bin/eos.py ship --story {story}` yourself (it branches,"
+            " commits, pushes, opens the PR; it merges by itself on green checks) and tell me the PR link.")  # fmt: skip
+
+
 def nav_status(root: Path, m: dict) -> dict:
     lc = load_lifecycle(root)
     mode = m.get("mode") or detect_mode(root)[0]
@@ -4662,23 +4701,58 @@ def nav_status(root: Path, m: dict) -> dict:
                 "prompt": "Read memory/handoff.md and continue from 'Next step'. Delete the handoff when resolved.",
             }
         )
-    if nf["dirty"] and (nf["facts"]["commits"] == 0 or (nf["protected"] and nf["setup_only"])):
-        first = nf["facts"]["commits"] == 0
+    if nf["dirty"] and nf["facts"]["commits"] == 0:
         blockers.append(
             {
-                "say": "Commit the eos setup" + ("" if first else " on a branch"),
-                "why": "a clean starting point you can always come back to"
-                + ("" if first else "; protected branches only change through reviewed PRs"),
-                "cmd": ("" if first else "git switch -c chore/add-eos && ")
-                + 'git add -A && git commit -m "chore: add engineering-os"',
+                "say": "Commit the eos setup (the first commit of this repo)",
+                "why": "a clean starting point you can always come back to; the first commit may go on main,"
+                " every later change goes through a pull request",
+                "cmd": 'git add -A && git commit -m "chore: add engineering-os"',
+            }
+        )
+    elif nf["dirty"] and nf["protected"] and nf["housekeeping"]:
+        notes.append(
+            {
+                "say": "eos refreshed its own bookkeeping (.eos/manifest.json); it goes along with your next pull request",
+                "cmd": "nothing to do (or `git restore .eos/manifest.json` to drop it)",
+            }
+        )
+    elif nf["dirty"] and nf["protected"] and nf["setup_only"]:
+        upd = nf["setup_committed"]
+        blockers.append(
+            {
+                "say": (
+                    f"Ship the eos update you installed ({nf['dirty']} file(s)) as its own pull request"
+                    if upd
+                    else "Commit the eos setup on a branch and open its pull request"
+                ),
+                "why": "eos files changed on main; they go through a pull request like any change, kept apart from"
+                " story work so each PR stays easy to read"
+                + (
+                    " (CI files changed, so autopilot asks you to approve it: label human-approved)"
+                    if any(c.startswith(".github/") or c == ".pre-commit-config.yaml" for c in nf["changed"])
+                    else ""
+                ),
+                "cmd": 'python3 .eos/bin/eos.py ship --title "chore: '
+                + ("update engineering-os" if upd else "add engineering-os")
+                + '"',
             }
         )
     elif nf["protected"] and nf["dirty"]:
         blockers.append(
             {
-                "say": f"Move your {nf['dirty']} uncommitted change(s) off '{nf['branch']}' to a branch",
-                "why": "protected branches only change through reviewed PRs",
-                "cmd": "git switch -c feat/<short-name>",
+                "say": f"Move your {nf['dirty']} uncommitted change(s) off '{nf['branch']}' to a pull request",
+                "why": "main only changes through pull requests; `eos ship` makes the branch, the commit and the PR",
+                "cmd": 'python3 .eos/bin/eos.py ship --title "feat: <what changed>"',
+            }
+        )
+    inferred = [s for s in nf["stories"] if s.get("inferred")]
+    if inferred:
+        notes.append(
+            {
+                "say": f"{len(inferred)} story file(s) still say not done but are merged on main ({inferred[0]['path']});"
+                " counted as done",
+                "cmd": "set '**Status:** done' in them (eos ship does it for you from now on)",
             }
         )
     wip = []
@@ -4688,7 +4762,8 @@ def nav_status(root: Path, m: dict) -> dict:
                 {
                     "say": f"Continue story {s['title']} ({s['status']})",
                     "why": "finish what is started before starting more (limits work in progress)",
-                    "prompt": f"Continue {s['path']}: implement the remaining acceptance criteria as tests, then the full check.",
+                    "prompt": f"Continue {s['path']}: implement the remaining acceptance criteria as tests, then the full check."
+                    + ship_tail(root, s["path"]),
                     "story": s,
                 }
             )
@@ -4726,7 +4801,8 @@ def nav_status(root: Path, m: dict) -> dict:
                 step = {
                     "say": f"Next story: {s['title']} ({s['status']})",
                     "why": "small stories with acceptance criteria keep every change verifiable",
-                    "prompt": f"Implement {s['path']}: acceptance criteria as tests first, then code; full check before done.",
+                    "prompt": f"Implement {s['path']}: acceptance criteria as tests first, then code; full check before done."
+                    + ship_tail(root, s["path"]),
                     "story": s,
                 }
                 break
@@ -4754,6 +4830,7 @@ def nav_status(root: Path, m: dict) -> dict:
         "topology": m.get("topology"),
         "gates_mode": m.get("gates") or "strict",
         "teaching": m.get("teaching") or "off",
+        "autopilot": autopilot_on(root),
         "tools": list(m.get("tools") or []),
         "phase": current,
         "phase_title": cur.get("title") if current else "complete",
@@ -4846,7 +4923,7 @@ def render_next(st: dict, brief: bool = False) -> str:
     if n.get("tip"):
         lines.append(f"Tip: {n['tip']}")
     if n.get("story"):
-        lines += story_loop(n["story"], st.get("git") or {}, chat)
+        lines += story_loop(n["story"], st.get("git") or {}, chat, st.get("autopilot", False))
     if n.get("bmad"):
         lines.append(f"  or with BMAD: run the `{n['bmad']}` skill (`bmad-help` shows BMAD's own next step)")
     if teach:
@@ -4866,9 +4943,27 @@ def _slug(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:32].strip("-") or "story"
 
 
-def story_loop(story: dict, git: dict, chat: str) -> list[str]:
+def story_loop(story: dict, git: dict, chat: str, autopilot: bool = False) -> list[str]:
     """The whole loop for one story, each step saying where to type it, with a marker on the likely current step.
     People new to git/PRs got stuck between "code written" and "merged"; this spells out every hop."""
+    if autopilot:  # the agent does the git part; the person only steps in when a PR is labelled needs-human
+        on_branch = bool(git.get("branch")) and not git.get("protected")
+        here = 2 if on_branch and not git.get("dirty") else 1
+        steps = [
+            (chat, ("Paste the prompt above. The agent builds, checks (eos verify), then runs `eos ship` itself:"
+                    " branch, commit, push, pull request"), ""),
+            ("automatic", "GitHub runs the checks and the eos review; the PR merges by itself when all are green", ""),
+            ("you, only if asked", ("A PR labelled 'needs-human' (login, personal data, money, database, CI or tests"
+                                    " changed): GitHub notifies you; read it, then approve"),
+             "gh pr edit <PR number> --add-label human-approved"),
+            ("terminal", "After the merge, come back to main for the next story", "git switch main && git pull && eos next"),
+        ]  # fmt: skip
+        out = ["Autopilot is on: the agent opens the pull request and it merges itself (`eos explain autopilot`):"]
+        for i, (where, what, cmd) in enumerate(steps, 1):
+            out.append(f"  {i}. [{where}] {what}" + ("  <- you are probably here" if i == here else ""))
+            if cmd:
+                out.append(f"       {cmd}")
+        return out
     br = f"feat/{_slug(story.get('title', ''))}"
     on_branch = bool(git.get("branch")) and not git.get("protected")
     here = 1 if not on_branch else (3 if git.get("dirty") else (5 if story.get("status") == "review" else 2))
@@ -5895,7 +5990,7 @@ def verify_plan(root: Path, m: dict, c: dict, full: bool) -> list[tuple[str, str
 def _run_step(root: Path, step: tuple[str, str, list[str]], timeout: int) -> tuple[str, int, str, float]:
     label, d, argv = step
     t = time.time()
-    env = dict(os.environ, SKIP="no-commit-to-branch", NO_COLOR="1")
+    env = dict(os.environ, SKIP="no-commit-to-branch,eos-protect-branch", NO_COLOR="1")
     rc, out = run(argv, cwd=root / d if d not in (".", "") else root, timeout=timeout, env=env)
     if rc != 0 and argv[:2] == ["pre-commit", "run"]:  # formatters fix files and fail once: confirm
         rc, out = run(argv, cwd=root, timeout=timeout, env=env)
@@ -5947,29 +6042,500 @@ def cmd_verify(args: argparse.Namespace) -> int:
     extra, data_notes = data_extras(root, m, c, args.full, args.base)
     results += extra
     notes += data_notes
+    review: list[tuple[str, str]] = []
     if c["risk"] in ("risky", "one-way-door") or args.full:
         ref, _ = lane_base(root, args.base)
         added, removed, deleted = change_diff(root, ref)
-        fs = integrity_findings(added, removed, deleted)
-        results.append(("test integrity", 1 if fs else 0, "\n".join(fs), 0.0))
-    if not results:
-        print("  nothing to run for this lane" + (" (spike)" if c["lane"] == "spike" else ""))
-    ok = True
-    for label, rc, out, secs in results:
-        mark = "pass" if rc == 0 else ("timeout" if rc == 124 else "FAIL")
-        print(f"  {label} → {mark} ({secs:.1f}s)")
-        if rc not in (0, 124):
-            ok = False
-            print("    " + cap_output(root, out).replace("\n", "\n    "))
-    if c["risk"] == "standard" and not any(lb.startswith(("related", "full")) for lb, *_ in results):
-        print("  (no related tests found for the changed files; the full suite runs at push and in CI)")
-    for n in notes:
-        print("  " + n)
-    if c["review"] and c["lane"] != "spike":
-        print("  human review needed (line by line): " + ", ".join(c["review"][:10]))
+        for f in integrity_findings(added, removed, deleted):  # a person judges these; they are not failures
+            what, _, why = f.partition(": ")
+            review.append((what, why or f))
+    print(render_verify(root, c, results, notes, review, time.time() - t0))
+    ok = all(rc in (0, 124) for _, rc, _, _ in results)
     log_event(root, "verify", lane=c["lane"], ok=ok, ms=int((time.time() - t0) * 1000), steps=len(results))
-    print(f"eos verify: {'OK' if ok else 'FAILED'} in {time.time() - t0:.1f}s")
     return 0 if ok else 1
+
+
+VERIFY_FIX = (
+    ("pre-commit", "formatters may have fixed files already: run `eos verify` again; otherwise fix the lines shown"),
+    ("related tests", "a test fails: read the first error above, fix the code (not the test), run `eos verify`"),
+    ("full", "a test fails: read the first error above, fix the code (not the test), run `eos verify`"),
+    (
+        "bundle",
+        "the client bundle grew past its budget: shrink it, or `eos bundle-size --update` if the growth is wanted",
+    ),
+)
+
+
+def render_verify(
+    root: Path, c: dict, results: list, notes: list[str], review: list[tuple[str, str]], secs: float
+) -> str:
+    """Grouped and plain: what failed (with the fix), what a person must read (with why), what is only a hint,
+    then one verdict line and the next action. Every line is whole: nothing is cut in the middle or repeated."""
+    out: list[str] = []
+    failed = [(lb, rc, o) for lb, rc, o, _ in results if rc not in (0, 124)]
+    passed = [f"{lb} ({sec:.1f}s)" for lb, rc, _, sec in results if rc == 0]
+    slow = [lb for lb, rc, _, _ in results if rc == 124]
+    if not results:
+        out.append("  nothing to run for this lane" + (" (spike)" if c["lane"] == "spike" else ""))
+    if passed:
+        out.append(f"PASSED ({len(passed)}): " + ", ".join(passed))
+    if failed:
+        out.append(f"FAILED ({len(failed)}), fix these first:")
+        for lb, _rc, o in failed:
+            fix = next(
+                (f for k, f in VERIFY_FIX if lb.startswith(k)), "read the output below, fix it, run `eos verify` again"
+            )
+            out.append(f"  x {lb}")
+            out.append(f"    fix: {fix}")
+            body = cap_output(root, o)
+            if body.strip():
+                out.append("    " + body.replace("\n", "\n    "))
+    people = list(review)
+    if c["review"] and c["lane"] != "spike":
+        seen = {w for w, _ in people}
+        people += [
+            (f, "sensitive path (login, personal data, money, database, CI or checks)")
+            for f in c["review"][:10]
+            if f not in seen
+        ]
+    if people:
+        out.append(f"NEEDS HUMAN REVIEW ({len(people)}), not a failure; a person reads these before the merge:")
+        out += [f"  ! {w}: {why}" for w, why in people]
+    info = list(dict.fromkeys(n.strip() for n in notes if n.strip()))
+    if slow:
+        info.append("timed out (not counted as failed; CI runs it in full): " + ", ".join(slow))
+    if c["risk"] == "standard" and not any(lb.startswith(("related", "full")) for lb, *_ in results):
+        info.append("no related tests found for the changed files; the full suite runs at push and in CI")
+    if info:
+        out.append(f"INFO ({len(info)}), nothing to fix now:")
+        out += [f"  - {n}" for n in info]
+    if failed:
+        verdict = f"eos verify: FAILED ({len(failed)} of {len(results)}: {', '.join(lb for lb, _, _ in failed)}) in {secs:.1f}s"
+        nxt = "Next: fix the FAILED item(s) above, then run `eos verify` again."
+    elif people:
+        verdict = f"eos verify: OK, with {len(people)} item(s) for human review, in {secs:.1f}s"
+        nxt = ("Next: `eos ship` opens the PR; autopilot labels it needs-human and asks you to approve."
+               if autopilot_on(root) else "Next: open the PR and ask a person to read the items above.")  # fmt: skip
+    else:
+        verdict = f"eos verify: OK in {secs:.1f}s"
+        nxt = (
+            "Next: `eos ship` (branch, commit, PR; merges itself on green)."
+            if autopilot_on(root)
+            else "Next: commit and open the PR."
+        )
+    return "\n".join(out + [verdict, nxt])
+
+
+# ----------------------------------------------------------------------------- autopilot: review gate, ship, merge
+# The PR loop without a human in it. GitHub does not let you approve your own PR, so the "reviewer" is a CI job
+# (`eos review --ci`): deterministic checks + the lane classifier, with an optional advisory LLM review. Safe PRs
+# merge by themselves when every check is green (`eos autopilot merge --ci`, run by .github/workflows/eos-autopilot.yml,
+# which works on every GitHub plan, private repos on Free included: no branch protection or auto-merge needed).
+# Risky ones get the `needs-human` label and a comment that mentions the owner; nothing merges until a human adds
+# `human-approved`. The agent's part is one command after the work: `eos ship`.
+AUTOPILOT_LABELS = {
+    "autopilot": ("0e8a16", "eos: merge by itself when every check is green"),
+    "needs-human": ("d93f0b", "eos: a person must read this PR before it can merge"),
+    "human-approved": ("1d76db", "eos: a person read it and approves the merge"),
+    "test-change-approved": ("fbca04", "eos: a person confirmed the test changes are honest"),
+}
+REVIEW_MARK = "<!-- eos-review -->"
+AI_REVIEW_MARK = "<!-- eos-ai-review -->"
+AUTOPILOT_JOBS = ("eos review", "eos autopilot")  # our own check names: the merge step never waits for itself
+
+
+def autopilot_on(root: Path) -> bool:
+    """On unless switched off (`eos autopilot off` or "autopilot": false in .eos/config.json)."""
+    return _load_cfg(root).get("autopilot", True) is not False
+
+
+def _set_cfg(root: Path, key: str, value: object) -> None:
+    p = root / ".eos/config.json"
+    cfg = _load_cfg(root)
+    cfg[key] = value
+    write(p, json.dumps(cfg, indent=2) + "\n")
+
+
+def _gh(root: Path, *a: str, timeout: int = 60) -> tuple[int, str]:
+    return run(["gh", *a], cwd=root, timeout=timeout)
+
+
+def review_findings(root: Path, base: str | None, labels: str = "") -> dict:
+    """What a human must look at before this PR merges, in plain words. Empty `human` = safe to merge."""
+    c = classify_change(root, base, labels=labels)
+    ref, _ = lane_base(root, base)
+    added, removed, deleted = change_diff(root, ref)
+    integ = integrity_findings(added, removed, deleted)
+    gate = [x for x in integ if "quality-gate config changed" in x]
+    weak = [x for x in integ if x not in gate]
+    human: list[str] = []
+    if c["risk"] == "one-way-door":
+        human.append("a one-way door (hard to undo): " + "; ".join(c["reasons"][:3]))
+    sens = [f for f in c["review"] if not GATE_CFG_RX.search(f)]
+    if sens:
+        human.append(
+            "touches sensitive code (login, personal data, money, secrets or database): " + ", ".join(sens[:6])
+        )
+    gates = sorted({x.split(":", 1)[0] for x in gate} | {f for f in c["review"] if GATE_CFG_RX.search(f)})
+    if gates:
+        human.append("changes the checks themselves (CI, hooks, lint or eos config): " + ", ".join(gates[:6]))
+    if weak:
+        human.append("may weaken tests: " + "; ".join(weak[:4]))
+    info = [x for x in c["reasons"] if x.startswith("large change")]
+    approved = {x.strip() for x in labels.split(",") if x.strip()}
+    waived = "human-approved" in approved or (
+        "test-change-approved" in approved
+        and human
+        and all(h.startswith(("may weaken", "changes the checks")) for h in human)
+    )
+    return {"lane": c, "human": human, "info": info, "approved": waived}
+
+
+def _pr_number(env: dict | None = None) -> str:
+    env = os.environ if env is None else env
+    m = re.match(r"refs/pull/(\d+)/", env.get("GITHUB_REF", ""))
+    return env.get("EOS_PR") or (m.group(1) if m else "")
+
+
+def _owner_mention(root: Path) -> str:
+    who = os.environ.get("EOS_NOTIFY") or os.environ.get("GITHUB_REPOSITORY_OWNER", "")
+    return f"@{who.lstrip('@')}" if who else "the repo owner"
+
+
+def review_comment(r: dict, mention: str, pr: str) -> str:
+    lines = [
+        REVIEW_MARK,
+        f"{mention}, this pull request needs you before it can merge (eos autopilot stopped it).",
+        "",
+        "**Why:**",
+        *[f"- {h}" for h in r["human"]],
+        "",
+        "**What to do (about 5 minutes):**",
+        "1. Open the *Files changed* tab and read the files listed above.",
+        (
+            f"2. If it is fine, add the label `human-approved`: on this page click *Labels*, or run"
+            f" `gh pr edit {pr or '<PR number>'} --add-label human-approved`. The checks re-run and the PR merges by itself."
+        ),
+        '3. If something is wrong, write what in a comment, and paste it to your agent with: "Fix the review comments on this PR."',
+        "",
+        (
+            "Why eos stops these: changes to login, personal data, money, the database or the checks themselves are"
+            " the ones that hurt most when they are wrong, so a person reads them. Everything else merges on green."
+        ),
+    ]
+    return "\n".join(lines)
+
+
+def _ai_review(root: Path, base_ref: str) -> str:
+    """Optional advisory review by an LLM through OpenRouter (secret OPENROUTER_API_KEY). Never blocks."""
+    key = os.environ.get("OPENROUTER_API_KEY", "")
+    if not key:
+        return ""
+    import urllib.request
+
+    _, diff = run(["git", "diff", "--no-color", f"{base_ref}...HEAD"], cwd=root, timeout=30)
+    if not diff.strip():
+        return ""
+    model = os.environ.get("EOS_REVIEW_MODEL") or "openrouter/auto"
+    prompt = (
+        "You review a pull request for a small team. Report only real problems: bugs, security issues, missing tests"
+        " for new behaviour, broken acceptance criteria. At most 8 bullets, each with file and line, most serious"
+        " first, plain words. If nothing important, answer exactly: No blocking issues found.\n\nDiff:\n" + diff[:60000]
+    )
+    body = json.dumps({"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 900})
+    req = urllib.request.Request(
+        "https://openrouter.ai/api/v1/chat/completions",
+        data=body.encode(),
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        text = data["choices"][0]["message"]["content"].strip()
+    except Exception as e:  # noqa: BLE001 - advisory: any failure is a note, never a red check
+        return f"(AI review skipped: {type(e).__name__})"
+    return f"{AI_REVIEW_MARK}\n**AI review (advisory, {model}; it does not block the merge):**\n\n{text}"
+
+
+def _upsert_comment(root: Path, pr: str, mark: str, body: str) -> None:
+    rc, out = _gh(
+        root, "pr", "view", pr, "--json", "comments", "--jq", f'.comments[] | select(.body | contains("{mark}")) | .url'
+    )
+    if rc == 0 and out.strip():
+        return  # already said once for this PR; new pushes update the check, not the conversation
+    _gh(root, "pr", "comment", pr, "--body", body)
+
+
+def cmd_review(args: argparse.Namespace) -> int:
+    root = Path(args.dir).resolve()
+    labels = args.labels if args.labels is not None else os.environ.get("EOS_LABELS", "")
+    r = review_findings(root, args.base, labels)
+    c = r["lane"]
+    pr = args.pr or _pr_number()
+    out = [f"eos review: lane {c['lane']} ({'; '.join(c['reasons'][:2])})"]
+    if r["human"] and not r["approved"]:
+        out.append("NEEDS A HUMAN before merging:")
+        out += [f"  - {h}" for h in r["human"]]
+        out.append(
+            "  Fix: a person reads those files, then adds the label `human-approved` (the PR then merges itself)."
+        )
+    elif r["human"]:
+        out.append("Approved by a person (label): " + "; ".join(r["human"]))
+    else:
+        out.append("No sensitive changes: safe to merge as soon as every check is green.")
+    out += [f"  info: {i}" for i in r["info"]]
+    print("\n".join(out))
+    summ = os.environ.get("GITHUB_STEP_SUMMARY")
+    if args.ci and summ:
+        with open(summ, "a", encoding="utf-8") as fh:
+            fh.write("### eos review\n\n```\n" + "\n".join(out) + "\n```\n")
+    blocked = bool(r["human"]) and not r["approved"]
+    if args.ci and pr and shutil.which("gh"):
+        if blocked:
+            for name in ("needs-human",):
+                col, desc = AUTOPILOT_LABELS[name]
+                _gh(root, "label", "create", name, "--color", col, "--description", desc)
+            _gh(root, "pr", "edit", pr, "--add-label", "needs-human")
+            _upsert_comment(root, pr, REVIEW_MARK, review_comment(r, _owner_mention(root), pr))
+        elif "needs-human" in labels:
+            _gh(root, "pr", "edit", pr, "--remove-label", "needs-human")
+        ai = _ai_review(root, lane_base(root, args.base)[0] or "HEAD")
+        if ai.startswith(AI_REVIEW_MARK):
+            _gh(root, "pr", "comment", pr, "--body", ai)
+        elif ai:
+            print(ai)
+    return 1 if blocked else 0
+
+
+def _checks_state(root: Path, sha: str) -> tuple[str, list[str]]:
+    """('pending' | 'green' | 'red', names) from the latest run of each check on the commit, ours excluded."""
+    rc, out = _gh(root, "api", f"repos/{{owner}}/{{repo}}/commits/{sha}/check-runs?per_page=100", "--jq", ".check_runs")
+    if rc != 0:
+        return "pending", [out.strip()[:200]]
+    latest: dict[str, dict] = {}
+    for cr in json.loads(out or "[]"):
+        n = cr.get("name", "")
+        if n.startswith(AUTOPILOT_JOBS):
+            continue
+        if n not in latest or cr.get("id", 0) > latest[n].get("id", 0):
+            latest[n] = cr
+    pend = [n for n, cr in latest.items() if cr.get("status") != "completed"] or ([] if latest else ["(no checks yet)"])
+    if pend:
+        return "pending", pend
+    bad = [n for n, cr in latest.items() if cr.get("conclusion") not in ("success", "skipped", "neutral")]
+    return ("red", bad) if bad else ("green", sorted(latest))
+
+
+def autopilot_merge(root: Path, pr: str, wait: int, interval: int = 20) -> int:
+    t0 = time.time()
+    while True:
+        rc, out = _gh(root, "pr", "view", pr, "--json", "state,isDraft,labels,headRefOid,mergeable")
+        if rc != 0:
+            eprint(out.strip())
+            return 1
+        info = json.loads(out)
+        labels = {lb["name"] for lb in info.get("labels", [])}
+        if info.get("state") != "OPEN":
+            print(f"PR #{pr} is {info.get('state', '?').lower()}: nothing to do")
+            return 0
+        if info.get("isDraft") or "needs-human" in labels and "human-approved" not in labels:
+            print(f"PR #{pr} waits for a person (draft or needs-human): not merging")
+            return 0
+        state, names = _checks_state(root, info["headRefOid"])
+        if state == "red":
+            print(
+                f"PR #{pr}: checks failed ({', '.join(names[:5])}); not merging. The agent fixes them and pushes again."
+            )
+            return 0
+        if state == "green":
+            rc, out = _gh(
+                root, "pr", "merge", pr, "--squash", "--delete-branch", "--match-head-commit", info["headRefOid"]
+            )
+            print(out.strip() or f"PR #{pr} merged")
+            return 0 if rc == 0 else 1
+        if time.time() - t0 > wait or (names == ["(no checks yet)"] and time.time() - t0 > 120):
+            print(f"PR #{pr}: still waiting for {', '.join(names[:5])}; the next event re-tries")
+            return 0
+        time.sleep(interval)
+
+
+def autopilot_setup(root: Path, dry: bool = False) -> int:
+    """Repo settings via gh, each step explained; a plan that refuses one is reported, not fatal."""
+    steps = [
+        ("Allow squash merges and auto-merge, delete branches after merge",
+         ["repo", "edit", "--enable-squash-merge", "--enable-auto-merge", "--delete-branch-on-merge"]),
+    ] + [
+        (f"Label '{n}'", ["label", "create", n, "--color", col, "--description", d, "--force"])
+        for n, (col, d) in AUTOPILOT_LABELS.items()
+    ]  # fmt: skip
+    for what, a in steps:
+        if dry:
+            print(f"would run: gh {' '.join(a)}   # {what}")
+            continue
+        rc, out = _gh(root, *a)
+        print(
+            f"  {'ok ' if rc == 0 else 'skip'} {what}"
+            + ("" if rc == 0 else f" ({out.strip().splitlines()[-1][:120] if out.strip() else 'failed'})")
+        )
+    prot = {
+        "required_status_checks": {"strict": False, "contexts": ["eos review"]},
+        "enforce_admins": False,
+        "required_pull_request_reviews": None,
+        "restrictions": None,
+        "allow_force_pushes": False,
+        "allow_deletions": False,
+    }
+    if dry:
+        print("would run: gh api -X PUT repos/{owner}/{repo}/branches/main/protection (required check: eos review)")
+        return 0
+    p = root / ".eos/state/protection.json"
+    write(p, json.dumps(prot))
+    rc, out = _gh(root, "api", "-X", "PUT", "repos/{owner}/{repo}/branches/main/protection", "--input", str(p))
+    if rc == 0:
+        print(
+            "  ok  Protect main: changes only through PRs whose 'eos review' check is green (no human approval needed)"
+        )
+    elif "Upgrade to GitHub Pro" in out or "403" in out:
+        print(
+            "  skip Protect main: GitHub Free does not offer branch protection on private repos. Autopilot still works:"
+            " the eos-autopilot workflow merges only when every check is green. The only difference: GitHub itself"
+            " won't stop a person who clicks Merge on a red PR."
+        )
+    else:
+        print(f"  skip Protect main ({out.strip()[:160]})")
+    print(
+        "Optional: add the secret OPENROUTER_API_KEY (repo Settings > Secrets and variables > Actions) for an AI review comment on each PR."
+    )
+    return 0
+
+
+def cmd_autopilot(args: argparse.Namespace) -> int:
+    root = Path(args.dir).resolve()
+    act = args.action
+    if act in ("on", "off"):
+        _set_cfg(root, "autopilot", act == "on")
+        print(f"autopilot {act}: " + (
+            "after each story the agent runs `eos ship`; safe PRs merge themselves on green checks, risky ones wait for you (needs-human)."
+            if act == "on" else "PRs wait for you to merge them (`gh pr merge --squash --delete-branch`)."
+        ))  # fmt: skip
+        return 0
+    if act == "setup":
+        return autopilot_setup(root, args.dry_run)
+    if act == "merge":
+        pr = args.pr or _pr_number()
+        if not pr:
+            eprint("eos autopilot merge: which PR? (--pr N)")
+            return 2
+        if not autopilot_on(root):
+            print("autopilot is off for this repo: not merging")
+            return 0
+        return autopilot_merge(root, pr, args.wait)
+    print(f"autopilot: {'on' if autopilot_on(root) else 'off'}  (eos autopilot on|off|setup; `eos explain autopilot`)")
+    return 0
+
+
+def _story_done(root: Path, story: str) -> bool:
+    p = root / story
+    if not p.is_file():
+        return False
+    txt = read(p)
+    new = re.sub(r"(\*\*Status:\*\*\s*)[^\n|]+", r"\1done", txt, count=1)
+    if new != txt:
+        write(p, new)
+    return new != txt
+
+
+def cmd_ship(args: argparse.Namespace) -> int:
+    """Branch (if on main), mark the story done, commit, push, open the PR, arm the merge. The agent runs this."""
+    root = Path(args.dir).resolve()
+    say = print
+    title = args.title or ""
+    story = args.story or ""
+    if story and not title:
+        p = root / story
+        title = "feat: " + (read(p).splitlines()[0].lstrip("# ").strip() if p.is_file() else Path(story).stem)
+    branch = current_branch(root)
+    prot = branch in ("main", "master", "") or branch.startswith(("release/", "production"))
+    if prot:
+        if not title:
+            eprint("eos ship: on main, give a --title (or --story) so the branch has a name")
+            return 2
+        nb = ("feat/" if title.startswith("feat") else "chore/") + _slug(title.split(":", 1)[-1])
+        if args.dry_run:
+            say(f"would create branch {nb}")
+        else:
+            rc, out = _git_switch_new(root, nb)
+            if rc != 0:
+                eprint(out.strip())
+                return 1
+        branch = nb
+    if story and not args.dry_run:
+        _story_done(root, story)
+    plan = [
+        ["git", "add", "-A"],
+        ["git", "commit", "-m", title or f"chore: {branch}"] + (["-m", f"Story: {story}"] if story else []),
+        ["git", "push", "-u", "origin", "HEAD"],
+    ]
+    if args.dry_run:
+        for a in plan:
+            say("would run: " + " ".join(a))
+        say("would run: gh pr create --fill --label autopilot; then arm the merge")
+        return 0
+    dirty = git_out(root, "status", "--porcelain")
+    for a in plan:
+        if a[1] == "commit" and not dirty:
+            continue  # already committed by the agent: just push and open the PR
+        rc, out = run(a, cwd=root, timeout=600)
+        if rc != 0:
+            eprint(f"`{' '.join(a[:3])}` failed:\n{cap_output(root, out)}")
+            eprint("Fix the problem it shows (often a pre-commit check), then run `eos ship` again.")
+            return 1
+    rc, out = _gh(root, "pr", "view", "--json", "number,url", timeout=30)
+    if rc != 0:
+        body = (f"Story: `{story}`\n\n" if story else "") + "Opened by `eos ship` (autopilot)."
+        col, desc = AUTOPILOT_LABELS["autopilot"]
+        _gh(root, "label", "create", "autopilot", "--color", col, "--description", desc)
+        extra = (["--title", title] if title else []) + (["--label", "autopilot"] if autopilot_on(root) else [])
+        rc, out = _gh(root, "pr", "create", "--fill", "--body", body, *extra)
+        if rc != 0:
+            eprint(out.strip())
+            eprint("Could not open the PR. Is `gh` logged in? Run `gh auth status`.")
+            return 1
+        rc, out = _gh(root, "pr", "view", "--json", "number,url", timeout=30)
+    info = json.loads(out) if rc == 0 else {}
+    pr, url = str(info.get("number", "")), info.get("url", "")
+    say(f"PR #{pr} open: {url}")
+    if not autopilot_on(root):
+        say("autopilot is off: merge it yourself when the checks are green (gh pr merge --squash --delete-branch).")
+        return 0
+    _gh(root, "pr", "merge", pr, "--auto", "--squash", "--delete-branch")  # Pro/public repos; harmless elsewhere
+    say("Autopilot: the checks and the eos review run on GitHub now. If they are green and nothing sensitive changed,")
+    say("the PR merges by itself (the eos-autopilot workflow). If a person must look, it gets the label 'needs-human'")
+    say(
+        "and the owner is mentioned in a comment. Next: start the next story (`eos next`) after `git switch main && git pull`."
+    )
+    if args.wait:
+        rc = autopilot_merge(root, pr, args.wait)
+        run(["git", "switch", "main"], cwd=root, timeout=20)
+        run(["git", "pull", "--ff-only"], cwd=root, timeout=120)
+        return rc
+    return 0
+
+
+def cmd_protect_branch(args: argparse.Namespace) -> int:
+    """pre-commit hook: no commits straight on main/master, except the very first one of a new repo (nothing to
+    branch from yet; `eos start` tells you to make it). Replaces pre-commit-hooks' no-commit-to-branch."""
+    root = Path.cwd()
+    if run(["git", "rev-parse", "-q", "--verify", "HEAD"], cwd=root, timeout=10)[0] != 0:
+        return 0
+    br = current_branch(root)
+    if br in ("main", "master"):
+        eprint(
+            f"eos: no commits directly on '{br}'. Make a branch first: git switch -c feat/<short-name>"
+            " (or let the agent run `eos ship`, which branches, commits and opens the PR)."
+        )
+        return 1
+    return 0
 
 
 # ----------------------------------------------------------------------------- escape hatches: spike, hotfix
@@ -7400,7 +7966,7 @@ def stop_check(root: Path, cfg: dict, since: float | None = None) -> tuple[bool,
         return True, ""
     timeout = int(cfg.get("stop_check_timeout", 180))
     # gitleaks still runs at commit time; at stop it only adds time (and a Go build on first run).
-    env = dict(os.environ, SKIP="no-commit-to-branch,gitleaks", NO_COLOR="1")
+    env = dict(os.environ, SKIP="no-commit-to-branch,eos-protect-branch,gitleaks", NO_COLOR="1")
     if mode == "auto":
         if not ((root / ".pre-commit-config.yaml").exists() and shutil.which("pre-commit")):
             return True, ""
@@ -7418,13 +7984,20 @@ def stop_check(root: Path, cfg: dict, since: float | None = None) -> tuple[bool,
 
 def cap_output(root: Path, out: str, max_lines: int = 40, max_chars: int = 3000) -> str:
     """Only the failing part goes back into the model's context; the full log is saved for humans."""
-    lines = [ln[:300] for ln in out.splitlines() if ln.strip() and not re.search(r"(Passed|Skipped)$", ln.strip())]
-    tail = "\n".join(lines[-max_lines:])[-max_chars:]
+    lines: list[str] = []
+    for ln in out.splitlines():
+        ln = ln.rstrip()[:300]
+        if ln.strip() and not re.search(r"(Passed|Skipped)$", ln.strip()) and ln not in lines[-3:]:
+            lines.append(ln)  # repeats (a formatter re-run prints the same findings twice) are shown once
+    keep = lines[-max_lines:]
+    while len(keep) > 1 and len("\n".join(keep)) > max_chars:
+        keep = keep[1:]  # drop whole lines, never cut one in the middle ("fig changed ..." was half a line)
+    tail = "\n".join(keep)
     try:
         write(root / ".eos/state/last-check.log", out)
     except OSError:
         return tail
-    more = len(lines) > max_lines or len("\n".join(lines)) > max_chars
+    more = len(keep) < len(lines)
     return tail + ("\n(truncated; full log: .eos/state/last-check.log)" if more else "")
 
 
@@ -14048,6 +14621,33 @@ def build_parser() -> argparse.ArgumentParser:
     ve.add_argument("--full", action="store_true", help="everything, whatever the lane")
     ve.add_argument("--dry-run", action="store_true", help="show what would run")
     ve.set_defaults(fn=cmd_verify)
+    rv = sub.add_parser("review", help="autopilot review gate: what a person must read before this PR merges")
+    rv.add_argument("dir", nargs="?", default=".")
+    rv.add_argument("--base")
+    rv.add_argument("--labels", help="PR labels, comma-separated (CI passes them)")
+    rv.add_argument("--pr", help="PR number (CI: from the event)")
+    rv.add_argument(
+        "--ci", action="store_true", help="label + comment the PR, optional AI review, red when a person is needed"
+    )
+    rv.set_defaults(fn=cmd_review)
+    shp = sub.add_parser("ship", help="after a story: branch, commit, push, open the PR and let autopilot merge it")
+    shp.add_argument("--dir", default=".")
+    shp.add_argument("--story", help="the story file: its Status becomes done in the same PR")
+    shp.add_argument("--title", help="PR title / commit message (default: from the story)")
+    shp.add_argument("--wait", type=int, nargs="?", const=1800, default=0, help="stay until merged (seconds)")
+    shp.add_argument("--dry-run", action="store_true")
+    shp.set_defaults(fn=cmd_ship)
+    apl = sub.add_parser(
+        "autopilot", help="PRs that merge themselves on green checks: status | on | off | setup | merge"
+    )
+    apl.add_argument("action", nargs="?", default="status", choices=["status", "on", "off", "setup", "merge"])
+    apl.add_argument("--dir", default=".")
+    apl.add_argument("--pr")
+    apl.add_argument("--wait", type=int, default=1500, help="merge: seconds to wait for the other checks")
+    apl.add_argument("--dry-run", action="store_true")
+    apl.set_defaults(fn=cmd_autopilot)
+    pb = sub.add_parser("protect-branch", help=argparse.SUPPRESS)
+    pb.set_defaults(fn=cmd_protect_branch)
     for kind, hl in (
         ("spike", "throwaway prototype branch: no tests/plans, never merged; `eos spike done` keeps the lesson"),
         ("hotfix", "urgent fix branch from main: minimal steps, review afterwards; `eos hotfix done` writes the note"),

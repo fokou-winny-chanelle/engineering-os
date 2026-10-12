@@ -1785,7 +1785,7 @@ class PlainGuidanceTests(unittest.TestCase):
     def test_explain_pr_flow_and_test_integrity(self):
         rc, out = run_eos("explain", "pr-flow")
         self.assertEqual(rc, 0)
-        for s in ("terminal", "GitHub", "gh pr create", "test-change-approved", "Merge"):
+        for s in ("terminal", "GitHub", "gh pr create", "eos.py ship", "needs-human", "human-approved", "autopilot"):
             self.assertIn(s, out)
         rc, out = run_eos("explain", "test-change-approved")  # the label name finds the same entry
         self.assertEqual(rc, 0)
@@ -1797,13 +1797,15 @@ class PlainGuidanceTests(unittest.TestCase):
         core = (REPO / "core/AGENTS.core.md").read_text(encoding="utf-8")
         self.assertIn("End each task in plain words", core)
         self.assertIn("terminal, this chat or GitHub", core)
-        self.assertIn("Gloss internal names", core)
+        self.assertIn("eos.py ship --story", core)  # autopilot: the agent ships, the user does not merge
+        self.assertIn("Never add approval labels", core)
 
     def test_story_loop_in_next_and_where(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             git_init(root)
             quiet(eos.main, ["init", str(root)])
+            quiet(eos.main, ["autopilot", "off", "--dir", str(root)])  # the manual loop (autopilot has its own test)
             (root / "docs/stories").mkdir(parents=True, exist_ok=True)
             (root / "docs/stories/0001-m0.md").write_text(
                 "# M0: Foundation\n**Status:** in progress\n", encoding="utf-8", newline="\n"
@@ -1850,6 +1852,217 @@ class PlainGuidanceTests(unittest.TestCase):
             self.assertIn("gh pr edit <PR number> --add-label test-change-approved", out)
             self.assertIn("not the agent", out)
         self.assertIn("gh pr edit 42 ", eos.test_integrity_help({"GITHUB_REF": "refs/pull/42/merge"}))
+
+
+def make_fwc_state(root: Path) -> None:
+    """Mirrors fwc-me after M0 (v0.7.2 field report): Build phase, M0 merged through PRs, 0002 ready, and eos
+    rewrote .eos/manifest.json on main. `eos next` said "Commit the eos setup on a branch" here."""
+    git_init(root)
+    quiet(eos.main, ["init", str(root)])
+    tbl = "| a | b |\n|---|---|\n| x | y |\n"
+    for rel, txt in {
+        "docs/prd.md": "# PRD\n",
+        "docs/ux/flows.md": "# Flows\n",
+        "docs/design/direction.md": "# Direction\n",
+        "docs/architecture/overview.md": f"# Overview\n## Quality attributes\n{tbl}## Failure modes\n{tbl}",
+        "docs/adr/0001-monorepo.md": "# 1\n",
+        "docs/adr/0002-hosting.md": "# 2\n",
+    }.items():
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text(txt, encoding="utf-8", newline="\n")
+    quiet(eos.main, ["topology", "set", "monorepo", "--dir", str(root)])
+    (root / "docs/stories").mkdir(parents=True, exist_ok=True)
+    for name, title, st in (("0001-m0-foundations", "M0: Foundations", "done"),
+                            ("0002-m1-design-system-reference-screen", "M1: Design system", "ready"),
+                            ("0003-m2-cms-core", "M2: CMS core", "ready")):  # fmt: skip
+        (root / f"docs/stories/{name}.md").write_text(
+            f"# {title}\n- **Status:** {st}\n", encoding="utf-8", newline="\n"
+        )
+    sh(["git", "add", "-A"], root)
+    sh(["git", "commit", "-qnm", "Merge planning v1 (#1)"], root)
+    (root / "README.md").write_text("x\n", encoding="utf-8", newline="\n")
+    sh(["git", "add", "-A"], root)
+    sh(["git", "commit", "-qnm", "Merge pull request #2 from fokou/feat/m0-foundations"], root)
+    mf = root / ".eos/manifest.json"
+    mf.write_text(mf.read_text(encoding="utf-8") + "\n", encoding="utf-8", newline="\n")
+
+
+class AutopilotTests(unittest.TestCase):
+    """v0.7.3: PRs merge themselves on green checks; a person only steps in for needs-human."""
+
+    def test_next_after_m0_points_to_m1_not_the_setup_commit(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            make_fwc_state(root)
+            rc, out = run_eos("next", str(root))
+            self.assertEqual(rc, 0)
+            self.assertNotIn("Commit the eos setup", out)
+            self.assertNotIn("chore/add-eos", out)
+            self.assertIn("M1: Design system", out)
+            self.assertIn("ship --story docs/stories/0002-m1-design-system-reference-screen.md", out)
+            self.assertIn("goes along with your next pull request", out)
+            # an eos update (AGENTS.md + CI changed) on main: ship it as its own PR, worded as an update
+            sh(["git", "checkout", "-q", "--", "."], root)
+            for rel in ("AGENTS.md", ".github/workflows/eos-core.yml"):
+                p = root / rel
+                p.write_text(p.read_text(encoding="utf-8") + "\n# updated\n", encoding="utf-8", newline="\n")
+            out = run_eos("next", str(root))[1]
+            self.assertIn("Ship the eos update you installed (2 file(s))", out)
+            self.assertIn('ship --title "chore: update engineering-os"', out)
+            self.assertIn("human-approved", out)
+            self.assertNotIn("chore/add-eos", out)
+
+    def test_story_status_inferred_from_main_history(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            make_fwc_state(root)
+            sh(["git", "checkout", "-q", "--", "."], root)
+            (root / "x.txt").write_text("x\n", encoding="utf-8", newline="\n")
+            sh(["git", "add", "-A"], root)
+            sh(["git", "commit", "-qnm", "feat: M1 design system (#5)"], root)
+            st = eos.nav_status(root, eos.load_manifest(root))
+            self.assertIn("M2: CMS core", st["next"]["say"])
+            self.assertTrue(any("merged on main" in n["say"] for n in st["notes"]))
+        self.assertTrue(eos.story_merged("docs/stories/0002-m1-x.md", "Story: docs/stories/0002-m1-x.md"))
+        self.assertFalse(eos.story_merged("docs/stories/0002-m1-x.md", "feat: m10 launch\nchore: m1.5 notes"))
+        self.assertTrue(
+            eos.story_merged("docs/stories/0011-m10-launch.md", "Merge pull request #9 from a/feat/m10-launch")
+        )
+
+    def test_autopilot_loop_in_next(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            make_fwc_state(root)
+            out = run_eos("next", str(root))[1]
+            self.assertIn("Autopilot is on", out)
+            self.assertIn("[automatic]", out)
+            self.assertIn("gh pr edit <PR number> --add-label human-approved", out)
+            self.assertNotIn("gh pr merge", out)
+            self.assertEqual(run_eos("autopilot", "off", "--dir", str(root))[0], 0)
+            self.assertFalse(eos.autopilot_on(root))
+            sh(["git", "add", "-A"], root)
+            sh(["git", "commit", "-qnm", "chore: autopilot off"], root)
+            out = run_eos("next", str(root))[1]
+            self.assertIn("gh pr merge --squash --delete-branch", out)
+            self.assertIn("autopilot: off", run_eos("autopilot", "--dir", str(root))[1])
+
+    def test_review_gate_sorts_safe_from_sensitive(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            make_lane_repo(root)
+            sh(["git", "switch", "-qc", "feat/x"], root)
+            (root / "app/util.py").write_text("def add(a, b):\n    return b + a\n", encoding="utf-8", newline="\n")
+            r = eos.review_findings(root, "main")
+            self.assertEqual(r["human"], [])
+            self.assertEqual(run_eos("review", str(root), "--base", "main")[0], 0)
+            (root / "app/billing/refund.py").write_text(
+                "def refund(x):\n    return -x\n", encoding="utf-8", newline="\n"
+            )
+            rc, out = run_eos("review", str(root), "--base", "main")
+            self.assertEqual(rc, 1)
+            self.assertIn("NEEDS A HUMAN", out)
+            self.assertIn("app/billing/refund.py", out)
+            self.assertEqual(
+                run_eos("review", str(root), "--base", "main", "--labels", "autopilot,human-approved")[0], 0
+            )
+            sh(["git", "checkout", "-q", "--", "app/billing/refund.py"], root)
+            wf = root / ".github/workflows/ci.yml"
+            wf.parent.mkdir(parents=True, exist_ok=True)
+            wf.write_text("name: ci\n", encoding="utf-8", newline="\n")
+            r = eos.review_findings(root, "main", "test-change-approved")
+            self.assertTrue(any("changes the checks themselves" in h for h in r["human"]))
+            self.assertTrue(r["approved"])  # only checks changed: test-change-approved is enough
+            body = eos.review_comment(r, "@chanelle", "7")
+            self.assertIn("@chanelle", body)
+            self.assertIn("gh pr edit 7 --add-label human-approved", body)
+
+    def test_merge_waits_for_other_checks_and_skips_its_own(self):
+        runs = [
+            {"id": 1, "name": "eos review", "status": "completed", "conclusion": "failure"},
+            {"id": 2, "name": "eos autopilot merge", "status": "in_progress"},
+            {"id": 3, "name": "verify", "status": "completed", "conclusion": "failure"},
+            {"id": 4, "name": "verify", "status": "completed", "conclusion": "success"},
+            {"id": 5, "name": "secrets", "status": "completed", "conclusion": "skipped"},
+        ]
+        with mock.patch.object(eos, "_gh", return_value=(0, json.dumps(runs))):
+            self.assertEqual(eos._checks_state(Path("."), "abc"), ("green", ["secrets", "verify"]))
+        runs.append({"id": 6, "name": "e2e", "status": "queued"})
+        with mock.patch.object(eos, "_gh", return_value=(0, json.dumps(runs))):
+            self.assertEqual(eos._checks_state(Path("."), "abc")[0], "pending")
+        with mock.patch.object(eos, "_gh", return_value=(0, "[]")):
+            self.assertEqual(eos._checks_state(Path("."), "abc")[0], "pending")
+
+    def test_ship_dry_run_and_workflow_installed(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            make_fwc_state(root)
+            rc, out = run_eos(
+                "ship",
+                "--dir",
+                str(root),
+                "--story",
+                "docs/stories/0002-m1-design-system-reference-screen.md",
+                "--dry-run",
+            )
+            self.assertEqual(rc, 0)
+            self.assertIn("would create branch feat/m1-design-system", out)
+            self.assertIn("Story: docs/stories/0002", out)
+            wf = (root / ".github/workflows/eos-autopilot.yml").read_text(encoding="utf-8")
+            self.assertIn("name: eos review", wf)
+            self.assertIn("autopilot merge", wf)
+            self.assertIn("needs: review", wf)
+
+    def test_first_commit_on_main_allowed_later_ones_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            git_init(root)
+            with mock.patch.object(eos.Path, "cwd", return_value=root):
+                self.assertEqual(quiet(eos.main, ["protect-branch"])[0], 0)
+                (root / "a.txt").write_text("a\n", encoding="utf-8", newline="\n")
+                sh(["git", "add", "-A"], root)
+                sh(["git", "commit", "-qnm", "first"], root)
+                self.assertEqual(quiet(eos.main, ["protect-branch"])[0], 1)
+                sh(["git", "switch", "-qc", "feat/y"], root)
+                self.assertEqual(quiet(eos.main, ["protect-branch"])[0], 0)
+        base = (REPO / "core/pre-commit/base.yaml").read_text(encoding="utf-8")
+        self.assertIn("eos-protect-branch", base)
+        self.assertNotIn("no-commit-to-branch", base)
+
+
+class VerifyOutputTests(unittest.TestCase):
+    def test_grouped_output_and_named_verdict(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            git_init(root)
+            c = {
+                "lane": "risky",
+                "risk": "risky",
+                "reasons": ["x"],
+                "review": ["biome.json", ".github/workflows/ci.yml"],
+            }
+            long = "\n".join(f"line {i} " + "y" * 120 for i in range(60))
+            results = [
+                ("pre-commit (changed files)", 0, "", 1.0),
+                ("related tests [.]", 1, long + "\nE same\nE same", 2.0),
+            ]
+            notes = [
+                "changed-line coverage not measured: run tests with coverage",
+                "client code changed: build, then `eos bundle-size`",
+            ]
+            review = [("biome.json", "quality-gate config changed (review it carefully)")]
+            out = eos.render_verify(root, c, results, notes, review, 3.0)
+            self.assertIn("FAILED (1), fix these first:", out)
+            self.assertIn("NEEDS HUMAN REVIEW (2), not a failure", out)
+            self.assertIn("INFO (2), nothing to fix now:", out)
+            self.assertIn("eos verify: FAILED (1 of 2: related tests [.])", out)
+            self.assertEqual(out.count("biome.json"), 1)
+            self.assertEqual(out.count("E same"), 1)
+            for ln in out.splitlines():  # no half lines: every kept output line starts at its beginning
+                if "line " in ln and "y" in ln:
+                    self.assertRegex(ln.strip(), r"^line \d+ y+$")
+            self.assertTrue(out.splitlines()[-1].startswith("Next:"))
+            ok = eos.render_verify(root, c, results[:1], [], review, 1.0)
+            self.assertIn("eos verify: OK, with", ok)
 
 
 class TopologyFixtureTests(unittest.TestCase):

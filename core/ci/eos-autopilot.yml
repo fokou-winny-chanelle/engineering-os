@@ -1,0 +1,58 @@
+# engineering-os autopilot: the reviewer is this workflow, not a person (GitHub forbids approving your own PR).
+# 1. eos review: lane + test integrity + gate-config check. Sensitive PRs (login, personal data, money, database,
+#    CI/check config, weakened tests) get the label `needs-human`, a comment that mentions the owner, and a red
+#    check; a person adds `human-approved` to release them. Optional advisory AI review with the secret
+#    OPENROUTER_API_KEY (model: repo variable EOS_REVIEW_MODEL); it never blocks.
+# 2. eos autopilot merge: when every other check on the PR is green, squash-merge and delete the branch. Works on
+#    every plan (private repos on GitHub Free have no branch protection or auto-merge). `eos autopilot off` stops it.
+# Merges made with the default token don't start other workflows (a GitHub rule); to run a deploy-on-main
+# workflow after an autopilot merge, add a fine-grained token as the secret EOS_AUTOPILOT_TOKEN
+# (contents + pull requests: read/write on this repo).
+name: eos-autopilot
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: read
+concurrency:
+  group: eos-autopilot-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  review:
+    name: eos review
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Review gate (if red, the PR has a comment saying what a person must check)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_REF: ${{ github.base_ref }}
+          EOS_PR: ${{ github.event.pull_request.number }}
+          EOS_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          EOS_REVIEW_MODEL: ${{ vars.EOS_REVIEW_MODEL }}
+        run: python3 .eos/bin/eos.py review --ci --base "origin/${BASE_REF}"
+  merge:
+    name: eos autopilot merge
+    needs: review
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Merge when every check is green (skips needs-human, drafts, and repos with autopilot off)
+        env:
+          GH_TOKEN: ${{ secrets.EOS_AUTOPILOT_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+          EOS_PR: ${{ github.event.pull_request.number }}
+        run: python3 .eos/bin/eos.py autopilot merge --wait 1500
